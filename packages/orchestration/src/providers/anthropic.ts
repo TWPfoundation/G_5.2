@@ -16,7 +16,7 @@ import type {
 import { openRouterGenerate } from "./openrouter";
 
 const DEFAULT_MODEL =
-  process.env.OPENROUTER_ANTHROPIC_MODEL ?? "anthropic/claude-sonnet-4-5";
+  process.env.OPENROUTER_ANTHROPIC_MODEL ?? "anthropic/claude-sonnet-4.6";
 
 export class AnthropicProvider implements ModelProvider {
   name = "anthropic";

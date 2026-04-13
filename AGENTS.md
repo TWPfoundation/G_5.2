@@ -81,8 +81,8 @@ Both models are routed through OpenRouter. Single API key, same endpoint.
 
 | Provider class    | Default model               | Env override                  |
 |-------------------|-----------------------------|-------------------------------|
-| `OpenAIProvider`  | `openai/gpt-4.5`            | `OPENROUTER_OPENAI_MODEL`     |
-| `AnthropicProvider` | `anthropic/claude-sonnet-4-5` | `OPENROUTER_ANTHROPIC_MODEL` |
+| `OpenAIProvider`  | `openai/gpt-5.4`              | `OPENROUTER_OPENAI_MODEL`     |
+| `AnthropicProvider` | `anthropic/claude-sonnet-4.6` | `OPENROUTER_ANTHROPIC_MODEL` |
 
 Endpoint: `https://openrouter.ai/api/v1/chat/completions`
 Auth: `Authorization: Bearer $OPENROUTER_API_KEY`

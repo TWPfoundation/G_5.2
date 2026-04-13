@@ -1,12 +1,10 @@
 /**
  * OpenAI provider — routed through OpenRouter.
  *
- * Uses model: openai/gpt-4.5 by default.
+ * Uses model: openai/gpt-5.4 by default.
  * Override with OPENROUTER_OPENAI_MODEL env var.
  *
- * Note on model name: OpenRouter model slugs may diverge from
- * OpenAI's own naming. Verify your model is available at:
- *   https://openrouter.ai/models?q=openai
+ * Model page: https://openrouter.ai/openai/gpt-5.4
  */
 
 import type {
@@ -17,7 +15,7 @@ import type {
 import { openRouterGenerate } from "./openrouter";
 
 const DEFAULT_MODEL =
-  process.env.OPENROUTER_OPENAI_MODEL ?? "openai/gpt-4.5";
+  process.env.OPENROUTER_OPENAI_MODEL ?? "openai/gpt-5.4";
 
 export class OpenAIProvider implements ModelProvider {
   name = "openai";
