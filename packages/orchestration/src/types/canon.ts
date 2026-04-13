@@ -1,43 +1,28 @@
-export interface CanonManifestDocument {
-  slug: string;
-  title: string;
-  type: string;
-  status: string;
-  priority: number;
-  retrieval_tags: string[];
-}
+/**
+ * Runtime types for the orchestration layer.
+ *
+ * YAML-shape types (CanonManifest, ContinuityFact, etc.) are inferred
+ * from Zod schemas in ../schemas/canon and re-exported here so
+ * downstream consumers have a single import path.
+ *
+ * Runtime/loader types (CanonDocument, LoadedCanon) are defined here
+ * because they represent the post-load in-memory shape, not the on-disk
+ * YAML shape.
+ */
 
-export interface CanonManifestRecoveredArtifact {
-  slug: string;
-  title: string;
-  class: string;
-  status: string;
-  retrieval_tags: string[];
-  retrieval_conditions?: string[];
-}
+export type {
+  CanonManifest,
+  CanonManifestDocument,
+  CanonManifestRecoveredArtifact,
+  ContinuityFact,
+  ContinuityFactsFile,
+  RecoveredIndex,
+  RecoveredIndexArtifact,
+} from "../schemas/canon";
 
-export interface CanonManifest {
-  version: number | string;
-  last_updated?: string;
-  documents: CanonManifestDocument[];
-  recovered_artifacts?: CanonManifestRecoveredArtifact[];
-}
+// ── Runtime types ──────────────────────────────────────────────────────────────
 
-export interface ContinuityFact {
-  id: string;
-  statement: string;
-  category: string;
-  status: string;
-  source: string;
-  confidence: string;
-  tags: string[];
-}
-
-export interface ContinuityFactsFile {
-  meta: Record<string, unknown>;
-  facts: ContinuityFact[];
-}
-
+/** A canon document loaded from disk — .md content resolved, path recorded. */
 export interface CanonDocument {
   slug: string;
   path: string;
@@ -48,9 +33,10 @@ export interface CanonDocument {
   retrievalTags: string[];
 }
 
+/** The fully loaded canon state passed around the pipeline. */
 export interface LoadedCanon {
   rootDir: string;
-  manifest: CanonManifest;
+  manifest: import("../schemas/canon").CanonManifest;
   documents: CanonDocument[];
-  continuityFacts: ContinuityFact[];
+  continuityFacts: import("../schemas/canon").ContinuityFact[];
 }

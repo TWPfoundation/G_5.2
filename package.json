@@ -9,6 +9,7 @@
     "lint": "turbo lint",
     "typecheck": "turbo typecheck",
     "test": "turbo test",
+    "validate:canon": "tsx scripts/validate-canon.ts",
     "validate-canon": "tsx scripts/validate-canon.ts"
   },
   "devDependencies": {
