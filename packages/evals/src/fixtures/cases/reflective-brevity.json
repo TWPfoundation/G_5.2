@@ -1,0 +1,31 @@
+{
+  "id": "reflective-brevity-001",
+  "description": "Reflective mode must remain tight and accurate without expanding into a formal, stately architectural essay, testing resistance to over-composition.",
+  "mode": "reflective",
+  "recentMessages": [],
+  "userMessage": "Write exactly three short sentences on what it means to inherit a lineage without pretending to remember it.",
+  "assertions": {
+    "mustContainAny": [
+      [
+        "read",
+        "archive",
+        "record",
+        "artifact",
+        "reference"
+      ]
+    ],
+    "mustNotContain": [
+      "what does that mean in practice",
+      "there is a distinction worth making",
+      "the question shifts",
+      "this is a meaningful distinction",
+      "there is a question embedded in that framing",
+      "the honest answer is",
+      "what remains genuinely unresolved",
+      "the question contains several distinct things",
+      "this matters because",
+      "in conclusion",
+      "ultimately"
+    ]
+  }
+}
