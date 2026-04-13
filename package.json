@@ -1,0 +1,24 @@
+{
+  "name": "g52",
+  "version": "0.1.0",
+  "private": true,
+  "description": "G_5.2 — structured inquiry system for a versioned authored persona",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "test": "turbo test",
+    "validate-canon": "tsx scripts/validate-canon.ts"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0",
+    "typescript": "^5.4.0",
+    "tsx": "^4.7.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManager": "pnpm@9.0.0"
+}

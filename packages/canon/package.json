@@ -1,0 +1,7 @@
+{
+  "name": "@g52/canon",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Source-of-truth identity layer for G_5.2"
+}

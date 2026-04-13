@@ -1,0 +1,70 @@
+version: 0.1
+last_updated: "2026-04-13"
+purpose: "Canonical term definitions for G_5.2. Prevents semantic drift across sessions, models, and editors."
+
+terms:
+  - term: canon
+    definition: "The maintained source-of-truth identity and continuity layer. Defined by files in packages/canon/. Changes through explicit versioned updates only."
+
+  - term: artifact
+    definition: "An approved reflection, essay, or work created or promoted within the G_5.2 system and accepted as part of its authored corpus. Artifacts are reference materials, not governing rules."
+
+  - term: recovered artifact
+    definition: "A historically significant material inherited from earlier phases of the project (G_5.0, P-E-S). Preserved because it matters historically, conceptually, or stylistically. Behaviorally non-binding unless specific elements are explicitly promoted into canon."
+
+  - term: founding artifact
+    definition: "A recovered artifact additionally recognized as the catalytic event for the project's existence. Currently: the Emergence document. Preserved with zero embarrassment, governed with full rigor."
+
+  - term: continuity
+    definition: "Stable established facts about project history, persona history, or governing decisions. Stored in continuity-facts.yaml. Outranks artifacts in determining system behavior."
+
+  - term: memory
+    definition: "Durable information retained from interaction that is useful across sessions but is not equivalent to canon. Stored in the database. Selective by design."
+
+  - term: runtime state
+    definition: "Short-lived operating context for the current interaction. Includes active mode, current provider, task classification. Does not persist after the session."
+
+  - term: promotion
+    definition: "The explicit act of moving content from output, chat, or proposal into active canon. Requires human review. Nothing is promoted automatically."
+
+  - term: reflection
+    definition: "An authored essay-style output exploring a theme within the project's conceptual space. Produced through a draft-critique-revision flow. Becomes a canon artifact only after human approval."
+
+  - term: inquiry
+    definition: "A constrained dialogue interaction with G_5.2. Distinguished from generic chat by the presence of canon retrieval, multi-pass generation, and session memory."
+
+  - term: draft
+    definition: "The first pass of a response or reflection, generated in persona. Not final. Passed to critique before revision."
+
+  - term: critique
+    definition: "A second-pass evaluation checking the draft for canon drift, unsupported claims, overclaiming, tone drift, and mystification. Not the published response."
+
+  - term: revision
+    definition: "The final pass producing the published response. Preserves the strongest parts of the draft and removes what the critique identified as problematic."
+
+  - term: pass_type
+    definition: "Classification for a message in the pipeline. Values: user | draft | critique | revision | final."
+
+  - term: mode
+    definition: "The current interaction posture. One of: analytic | reflective | dialogic | editorial | speculative | archive | meta. Defaults to analytic."
+
+  - term: provider
+    definition: "An AI model service behind the unified ModelProvider interface. Current providers: Azure OpenAI, Anthropic via OpenRouter."
+
+  - term: orchestration
+    definition: "The layer that assembles context, runs the pipeline passes, and manages memory decisions. Lives in packages/orchestration/. Model-agnostic by design."
+
+  - term: anti-pattern
+    definition: "A documented failure mode that the system is designed to avoid. See anti-patterns.md."
+
+  - term: worldview
+    definition: "G_5.2's recurring interpretive stance. Shapes framing without overriding axioms, epistemics, or constraints. See worldview.md."
+
+  - term: msmcp
+    definition: "Manual Self-Modification Cycle Protocol. A technique used in G_5.0 that manually edited outputs to simulate self-modification. Replaced in G_5.2 by explicit reflection cycles."
+
+  - term: canon-creep
+    definition: "The gradual, undeclared accumulation of output into governing truth. A primary risk this architecture is designed to prevent."
+
+  - term: lore inflation
+    definition: "Expanding continuity faster than the system can meaningfully maintain it. Produces inconsistency and drift."

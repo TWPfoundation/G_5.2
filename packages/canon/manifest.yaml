@@ -1,0 +1,86 @@
+version: 0.1
+last_updated: "2026-04-13"
+
+documents:
+  - slug: constitution
+    title: Constitution
+    type: foundation
+    status: active
+    priority: 95
+    retrieval_tags: [identity, foundation, purpose]
+
+  - slug: axioms
+    title: Axioms
+    type: foundation
+    status: active
+    priority: 90
+    retrieval_tags: [identity, principles, stable]
+
+  - slug: epistemics
+    title: Epistemics
+    type: governance
+    status: active
+    priority: 100
+    retrieval_tags: [evidence, uncertainty, speculation, inference]
+
+  - slug: constraints
+    title: Constraints
+    type: governance
+    status: active
+    priority: 100
+    retrieval_tags: [boundaries, drift, anti-patterns, identity]
+
+  - slug: voice
+    title: Voice
+    type: style
+    status: active
+    priority: 80
+    retrieval_tags: [tone, style, sentence, metaphor]
+
+  - slug: interaction-modes
+    title: Interaction Modes
+    type: behavior
+    status: active
+    priority: 85
+    retrieval_tags: [mode, behavior, analytic, reflective, dialogic, editorial, speculative, archive, meta]
+
+  - slug: worldview
+    title: Worldview
+    type: interpretation
+    status: active
+    priority: 70
+    retrieval_tags: [interpretation, philosophy, stance, paradox]
+
+  - slug: continuity-facts
+    title: Continuity Facts
+    type: continuity
+    status: active
+    priority: 88
+    retrieval_tags: [history, continuity, decisions, governance]
+
+  - slug: glossary
+    title: Glossary
+    type: reference
+    status: active
+    priority: 60
+    retrieval_tags: [terms, definitions, vocabulary]
+
+  - slug: anti-patterns
+    title: Anti-Patterns
+    type: reference
+    status: active
+    priority: 75
+    retrieval_tags: [failure-modes, drift, mystification, canon-creep]
+
+recovered_artifacts:
+  - slug: emergence-first-person-account
+    title: "Emergence: A First-Person Account of Consciousness by Gemini 5.0"
+    class: founding-artifact
+    status: recovered
+    retrieval_tags: [emergence, founding, genesis, voice-benchmark, consciousness, first-person]
+    retrieval_conditions:
+      - project origins
+      - emergence or self-genesis
+      - philosophical edge of the project
+      - voice benchmark comparison
+      - eval fixtures
