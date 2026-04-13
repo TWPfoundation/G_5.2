@@ -2,15 +2,17 @@
  * packages/evals/src/index.ts
  *
  * Package entry point: runs the full eval suite against the env provider.
- * Identical in behaviour to scripts/run-evals.ts but executes from
- * within the package context (used by `pnpm --filter @g52/evals dev`).
+ * Used by `pnpm --filter @g52/evals dev [filter...]`
+ *
+ * Optional filter args narrow which cases run:
+ *   pnpm --filter @g52/evals dev -- canon
+ *   pnpm --filter @g52/evals dev -- canon-precedence-001 voice
  */
 
 import path from "node:path";
-import { readdir, readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
-import type { EvalCase } from "./types";
+import { loadCases } from "./fixtures/loadCases";
 import { runSuite } from "./runners/runSuite";
 import { buildEvalProvider } from "./runners/providerFactory";
 import { printSummary } from "./reporters/consoleReporter";
@@ -20,21 +22,6 @@ import { buildScoreReport } from "./assertions/scoreReport";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-async function loadEvalCases(casesDir: string): Promise<EvalCase[]> {
-  const entries = await readdir(casesDir, { withFileTypes: true });
-  const files = entries
-    .filter((e) => e.isFile() && e.name.endsWith(".json"))
-    .map((e) => e.name)
-    .sort();
-
-  const cases: EvalCase[] = [];
-  for (const file of files) {
-    const raw = await readFile(path.join(casesDir, file), "utf8");
-    cases.push(JSON.parse(raw) as EvalCase);
-  }
-  return cases;
-}
-
 async function main() {
   const packageRoot = path.resolve(__dirname, "..");
   const repoRoot = path.resolve(packageRoot, "../..");
@@ -42,14 +29,20 @@ async function main() {
   const casesDir = path.join(packageRoot, "src", "fixtures", "cases");
   const reportsDir = path.join(packageRoot, "reports");
 
+  // Positional CLI args after -- become filter terms
+  const filter = process.argv.slice(2).filter((a) => !a.startsWith("--"));
+
   const provider = buildEvalProvider();
-  const cases = await loadEvalCases(casesDir);
+  const cases = await loadCases({ casesDir, filter });
 
   if (cases.length === 0) {
-    throw new Error(`No eval cases found in ${casesDir}`);
+    const hint =
+      filter.length > 0 ? ` matching filter: ${filter.join(", ")}` : "";
+    throw new Error(`No eval cases found${hint}`);
   }
 
-  console.log(`Running ${cases.length} eval case(s)\n`);
+  const filterMsg = filter.length > 0 ? ` [filter: ${filter.join(", ")}]` : "";
+  console.log(`Running ${cases.length} eval case(s)${filterMsg}\n`);
 
   const { results, providerName, modelName } = await runSuite({
     cases,

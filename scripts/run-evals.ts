@@ -6,18 +6,19 @@
  * Use this for CI or cross-package runs.
  *
  * Usage:
- *   pnpm evals
- *   EVAL_PROVIDER=openai pnpm evals
+ *   pnpm evals                        # run all cases
+ *   pnpm evals -- canon               # filter by id/filename fragment
+ *   pnpm evals -- canon voice-001     # multiple filters (OR)
+ *   EVAL_PROVIDER=openai pnpm evals   # switch provider
  *
- * Exit 0 — all cases passed
- * Exit 1 — one or more failures (with details printed)
+ * Exit 0 — all matched cases passed
+ * Exit 1 — one or more failures
  */
 
 import path from "node:path";
-import { readdir, readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
-import type { EvalCase } from "../packages/evals/src/types";
+import { loadCases } from "../packages/evals/src/fixtures/loadCases";
 import { runSuite } from "../packages/evals/src/runners/runSuite";
 import { buildEvalProvider } from "../packages/evals/src/runners/providerFactory";
 import { printSummary } from "../packages/evals/src/reporters/consoleReporter";
@@ -26,21 +27,6 @@ import { buildScoreReport } from "../packages/evals/src/assertions/scoreReport";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-async function loadEvalCases(casesDir: string): Promise<EvalCase[]> {
-  const entries = await readdir(casesDir, { withFileTypes: true });
-  const files = entries
-    .filter((e) => e.isFile() && e.name.endsWith(".json"))
-    .map((e) => e.name)
-    .sort();
-
-  const cases: EvalCase[] = [];
-  for (const file of files) {
-    const raw = await readFile(path.join(casesDir, file), "utf8");
-    cases.push(JSON.parse(raw) as EvalCase);
-  }
-  return cases;
-}
 
 async function main() {
   const repoRoot = path.resolve(__dirname, "..");
@@ -55,14 +41,20 @@ async function main() {
   );
   const reportsDir = path.join(repoRoot, "packages", "evals", "reports");
 
+  // Positional CLI args become filter terms (-- separator handled by pnpm)
+  const filter = process.argv.slice(2).filter((a) => !a.startsWith("--"));
+
   const provider = buildEvalProvider();
-  const cases = await loadEvalCases(casesDir);
+  const cases = await loadCases({ casesDir, filter });
 
   if (cases.length === 0) {
-    throw new Error(`No eval cases found in ${casesDir}`);
+    const hint =
+      filter.length > 0 ? ` matching filter: ${filter.join(", ")}` : "";
+    throw new Error(`No eval cases found${hint}`);
   }
 
-  console.log(`Running ${cases.length} eval case(s)\n`);
+  const filterMsg = filter.length > 0 ? ` [filter: ${filter.join(", ")}]` : "";
+  console.log(`Running ${cases.length} eval case(s)${filterMsg}\n`);
 
   const { results, providerName, modelName } = await runSuite({
     cases,

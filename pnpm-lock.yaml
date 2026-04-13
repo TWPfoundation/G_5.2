@@ -25,6 +25,9 @@ importers:
       '@g52/orchestration':
         specifier: workspace:*
         version: link:../orchestration
+      zod:
+        specifier: ^3.22.0
+        version: 3.25.76
     devDependencies:
       tsx:
         specifier: ^4.7.0
