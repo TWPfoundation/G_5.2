@@ -75,16 +75,20 @@ The goal is to produce coherent, auditable, high-quality dialogue and reflection
 
 ---
 
-## Provider configuration *(planned — commit 2)*
+## Provider configuration
 
-Intended providers:
-- **Azure OpenAI** — `https://twp-resource.openai.azure.com/openai/v1`
-- **Anthropic via OpenRouter** — `https://openrouter.ai/api/v1`
+Both models are routed through OpenRouter. Single API key, same endpoint.
 
-Both will implement a unified `ModelProvider` interface.
-No provider-specific logic should leak outside `packages/orchestration/src/providers/`.
+| Provider class    | Default model               | Env override                  |
+|-------------------|-----------------------------|-------------------------------|
+| `OpenAIProvider`  | `openai/gpt-4.5`            | `OPENROUTER_OPENAI_MODEL`     |
+| `AnthropicProvider` | `anthropic/claude-sonnet-4-5` | `OPENROUTER_ANTHROPIC_MODEL` |
 
-*This layer does not exist yet. See `.env.example` for configuration reference.*
+Endpoint: `https://openrouter.ai/api/v1/chat/completions`
+Auth: `Authorization: Bearer $OPENROUTER_API_KEY`
+
+No provider-specific logic leaks outside `packages/orchestration/src/providers/`.
+The shared client lives in `src/providers/openrouter.ts`.
 
 ---
 

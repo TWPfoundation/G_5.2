@@ -1,30 +1,36 @@
+/**
+ * Anthropic provider — routed through OpenRouter.
+ *
+ * Uses model: anthropic/claude-sonnet-4-5 by default.
+ * Override with OPENROUTER_ANTHROPIC_MODEL env var.
+ *
+ * Note on model name: verify availability at:
+ *   https://openrouter.ai/models?q=anthropic
+ */
+
 import type {
   GenerateTextInput,
   GenerateTextOutput,
   ModelProvider,
 } from "../types/providers";
+import { openRouterGenerate } from "./openrouter";
 
-/**
- * Anthropic via OpenRouter provider stub.
- *
- * To implement:
- * 1. Set OPENROUTER_API_KEY and OPENROUTER_DEFAULT_MODEL in your .env file
- *    (see .env.example).
- * 2. OpenRouter accepts standard OpenAI-compatible chat completions format.
- * 3. Implement generateText() below using fetch or the openai SDK pointed
- *    at the OpenRouter base URL.
- *
- * Endpoint shape:
- *   POST https://openrouter.ai/api/v1/chat/completions
- *   Header: Authorization: Bearer {OPENROUTER_API_KEY}
- *   Body:   { model: "anthropic/claude-3-5-sonnet", messages: [...] }
- */
+const DEFAULT_MODEL =
+  process.env.OPENROUTER_ANTHROPIC_MODEL ?? "anthropic/claude-sonnet-4-5";
+
 export class AnthropicProvider implements ModelProvider {
   name = "anthropic";
+  readonly model: string;
 
-  async generateText(_input: GenerateTextInput): Promise<GenerateTextOutput> {
-    throw new Error(
-      "AnthropicProvider not implemented yet. See src/providers/anthropic.ts for wiring instructions."
+  constructor(model?: string) {
+    this.model = model ?? DEFAULT_MODEL;
+  }
+
+  async generateText(input: GenerateTextInput): Promise<GenerateTextOutput> {
+    return openRouterGenerate(
+      input.model ?? this.model,
+      input,
+      this.name
     );
   }
 }
