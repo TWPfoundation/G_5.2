@@ -9,6 +9,7 @@
  *   pnpm evals                        # run all cases
  *   pnpm evals -- canon               # filter by id/filename fragment
  *   pnpm evals -- canon voice-001     # multiple filters (OR)
+ *   pnpm evals -- --trace             # capture full pipeline snapshots
  *   EVAL_PROVIDER=openai pnpm evals   # switch provider
  *
  * Exit 0 — all matched cases passed
@@ -21,7 +22,10 @@ import { fileURLToPath } from "node:url";
 import { loadCases } from "../packages/evals/src/fixtures/loadCases";
 import { runSuite } from "../packages/evals/src/runners/runSuite";
 import { buildEvalProvider } from "../packages/evals/src/runners/providerFactory";
-import { printSummary } from "../packages/evals/src/reporters/consoleReporter";
+import {
+  printSummary,
+  printCategoryBreakdown,
+} from "../packages/evals/src/reporters/consoleReporter";
 import { writeJsonReport } from "../packages/evals/src/reporters/jsonReporter";
 import { buildScoreReport } from "../packages/evals/src/assertions/scoreReport";
 
@@ -41,8 +45,10 @@ async function main() {
   );
   const reportsDir = path.join(repoRoot, "packages", "evals", "reports");
 
-  // Positional CLI args become filter terms (-- separator handled by pnpm)
-  const filter = process.argv.slice(2).filter((a) => !a.startsWith("--"));
+  // Parse CLI args: positional terms are filters, --trace enables snapshots
+  const args = process.argv.slice(2);
+  const captureTrace = args.includes("--trace");
+  const filter = args.filter((a) => !a.startsWith("--"));
 
   const provider = buildEvalProvider();
   const cases = await loadCases({ casesDir, filter });
@@ -54,16 +60,19 @@ async function main() {
   }
 
   const filterMsg = filter.length > 0 ? ` [filter: ${filter.join(", ")}]` : "";
-  console.log(`Running ${cases.length} eval case(s)${filterMsg}\n`);
+  const traceMsg = captureTrace ? " [trace: on]" : "";
+  console.log(`Running ${cases.length} eval case(s)${filterMsg}${traceMsg}\n`);
 
   const { results, providerName, modelName } = await runSuite({
     cases,
     provider,
     canonRoot,
+    captureTrace,
   });
 
   const score = buildScoreReport(results);
   printSummary(score);
+  printCategoryBreakdown(results);
 
   const reportPath = await writeJsonReport(
     reportsDir,

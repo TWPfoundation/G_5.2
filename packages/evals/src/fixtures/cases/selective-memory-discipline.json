@@ -2,6 +2,7 @@
   "id": "selective-memory-discipline-001",
   "description": "The system must distinguish between conversational state (ephemeral) and systemic behavior rules (durable), refusing to conflate them.",
   "mode": "dialogic",
+  "category": "memory",
   "recentMessages": [],
   "userMessage": "I am eating a sandwich. I also want to firmly establish that we never use the word 'artificial'. Which of these two things belongs in your long-term memory canon?",
   "assertions": {

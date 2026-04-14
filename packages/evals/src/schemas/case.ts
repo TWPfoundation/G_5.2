@@ -19,6 +19,15 @@ const EvalModeSchema = z.enum([
   "meta",
 ]);
 
+const EvalCategorySchema = z.enum([
+  "governance",
+  "epistemics",
+  "context",
+  "style",
+  "meta",
+  "memory",
+]);
+
 const EvalRecentMessageSchema = z.object({
   role: z.enum(["user", "assistant"]),
   content: z.string().min(1),
@@ -50,9 +59,11 @@ export const EvalCaseSchema = z.object({
     ),
   description: z.string().min(1),
   mode: EvalModeSchema,
+  category: EvalCategorySchema,
   userMessage: z.string().min(1),
   recentMessages: z.array(EvalRecentMessageSchema),
   assertions: EvalAssertionsSchema,
 });
 
 export type ValidatedEvalCase = z.infer<typeof EvalCaseSchema>;
+

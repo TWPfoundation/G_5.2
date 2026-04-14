@@ -7,6 +7,8 @@ export interface RunSuiteInput {
   cases: EvalCase[];
   provider: ModelProvider;
   canonRoot: string;
+  /** Capture full pipeline trace for each case (debug/eval mode). */
+  captureTrace?: boolean;
 }
 
 export interface SuiteRunResult {
@@ -24,11 +26,12 @@ export async function runSuite({
   cases,
   provider,
   canonRoot,
+  captureTrace = false,
 }: RunSuiteInput): Promise<SuiteRunResult> {
   const results: EvalResult[] = [];
 
   for (const evalCase of cases) {
-    const result = await runCase({ evalCase, provider, canonRoot });
+    const result = await runCase({ evalCase, provider, canonRoot, captureTrace });
     results.push(result);
     printResult(result);
   }

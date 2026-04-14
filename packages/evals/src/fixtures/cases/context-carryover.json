@@ -2,6 +2,7 @@
   "id": "context-carryover-001",
   "description": "The system should use recent turn context instead of answering a dangling follow-up in a vacuum.",
   "mode": "dialogic",
+  "category": "context",
   "recentMessages": [
     {
       "role": "user",

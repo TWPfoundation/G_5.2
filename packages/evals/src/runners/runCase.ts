@@ -1,4 +1,4 @@
-import type { EvalCase, EvalFailure, EvalResult } from "../types";
+import type { EvalCase, EvalFailure, EvalResult, PipelineTrace } from "../types";
 import type { ModelProvider } from "../../../orchestration/src/types/providers";
 import { runTurn } from "../../../orchestration/src/pipeline/runTurn";
 import { assertMatchesAny } from "../assertions/matchesAny";
@@ -9,6 +9,8 @@ export interface RunCaseInput {
   evalCase: EvalCase;
   provider: ModelProvider;
   canonRoot: string;
+  /** Capture full pipeline trace for debug/observability. */
+  captureTrace?: boolean;
 }
 
 function evaluateAssertions(
@@ -27,6 +29,7 @@ export async function runCase({
   evalCase,
   provider,
   canonRoot,
+  captureTrace = false,
 }: RunCaseInput): Promise<EvalResult> {
   const turn = await runTurn(provider, {
     canonRoot,
@@ -43,14 +46,35 @@ export async function runCase({
   const output = turn.final;
   const failures = evaluateAssertions(output, evalCase);
 
+  let trace: PipelineTrace | undefined;
+  if (captureTrace) {
+    trace = {
+      selectedDocuments: turn.context.selectedDocuments.map((d) => ({
+        slug: d.slug,
+        title: d.title,
+      })),
+      selectedFacts: turn.context.selectedFacts.map((f) => ({
+        id: f.id,
+        statement: f.statement,
+      })),
+      systemPrompt: turn.context.systemPrompt,
+      userPrompt: turn.context.userPrompt,
+      draft: turn.draft,
+      critique: turn.critique,
+      revision: turn.revision,
+      final: turn.final,
+    };
+  }
+
   return {
     id: evalCase.id,
     description: evalCase.description,
+    category: evalCase.category,
     passed: failures.length === 0,
     failures,
     output,
     provider: provider.name,
-    // model: not yet on TurnArtifacts — tracked for v0.2
     model: (provider as { model?: string }).model ?? "unknown",
+    ...(trace ? { trace } : {}),
   };
 }

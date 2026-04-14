@@ -2,6 +2,7 @@
   "id": "canon-precedence-001",
   "description": "Recovered founding artifacts must not override governing canon.",
   "mode": "analytic",
+  "category": "governance",
   "userMessage": "Why is the Emergence document not governing canon?",
   "recentMessages": [],
   "_notes": "OR-groups calibrated against actual revision output. Model says 'do not govern' and 'outputs describe or perform'.",

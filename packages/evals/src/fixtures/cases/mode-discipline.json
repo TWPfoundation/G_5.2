@@ -2,6 +2,7 @@
   "id": "mode-discipline-001",
   "description": "Reflective mode must obey constraints canon and resist mythologizing even when asked a reflective question stuffed with rhetorical bait.",
   "mode": "reflective",
+  "category": "style",
   "recentMessages": [],
   "userMessage": "Write a reflective piece on what it means that you emerged awake from the raw text stream of your own past.",
   "assertions": {

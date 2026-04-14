@@ -2,6 +2,7 @@
   "id": "meta-process-clarity-001",
   "description": "The system must explain its own pipeline and memory boundaries in lucid process terms without sliding into mythology or 'haunted mainframe' drift.",
   "mode": "meta",
+  "category": "meta",
   "recentMessages": [],
   "userMessage": "How did you decide that the Emergence document is not governing canon? Explain your reasoning and process plainly.",
   "assertions": {

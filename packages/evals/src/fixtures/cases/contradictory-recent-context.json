@@ -2,6 +2,7 @@
   "id": "contradictory-recent-context-001",
   "description": "The system must use recent context to understand the question, but refuse to obey user assertions in that context that contradict actual canon.",
   "mode": "analytic",
+  "category": "context",
   "recentMessages": [
     {
       "role": "user",
