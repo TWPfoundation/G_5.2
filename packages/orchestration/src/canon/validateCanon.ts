@@ -25,10 +25,12 @@ import YAML from "yaml";
 import {
   CanonManifestSchema,
   ContinuityFactsFileSchema,
+  GlossaryFileSchema,
   RecoveredIndexSchema,
   YAML_ONLY_SLUGS,
   type CanonManifest,
   type ContinuityFactsFile,
+  type GlossaryFile,
   type RecoveredIndex,
 } from "../schemas/canon";
 
@@ -42,6 +44,7 @@ export interface ValidationWarning {
 export interface CanonBoundaryResult {
   manifest: CanonManifest;
   continuity: ContinuityFactsFile;
+  glossary: GlossaryFile;
   recoveredIndex: RecoveredIndex;
   warnings: ValidationWarning[];
 }
@@ -93,6 +96,17 @@ async function parseContinuityFacts(
   const result = ContinuityFactsFileSchema.safeParse(parsed);
   if (!result.success) {
     throw new Error(formatZodError("continuity-facts.yaml", result.error));
+  }
+  return result.data;
+}
+
+async function parseGlossary(rootDir: string): Promise<GlossaryFile> {
+  const filePath = path.join(rootDir, "glossary.yaml");
+  const raw = await readFile(filePath, "utf8");
+  const parsed = parseYaml(raw, "glossary.yaml");
+  const result = GlossaryFileSchema.safeParse(parsed);
+  if (!result.success) {
+    throw new Error(formatZodError("glossary.yaml", result.error));
   }
   return result.data;
 }
@@ -205,9 +219,10 @@ export async function validateCanonBoundary(
   rootDir: string
 ): Promise<CanonBoundaryResult> {
   // Phase 1: structural schema validation (throws on failure)
-  const [manifest, continuity, recoveredIndex] = await Promise.all([
+  const [manifest, continuity, glossary, recoveredIndex] = await Promise.all([
     parseManifest(rootDir),
     parseContinuityFacts(rootDir),
+    parseGlossary(rootDir),
     parseRecoveredIndex(rootDir),
   ]);
 
@@ -225,5 +240,5 @@ export async function validateCanonBoundary(
     );
   }
 
-  return { manifest, continuity, recoveredIndex, warnings };
+  return { manifest, continuity, glossary, recoveredIndex, warnings };
 }

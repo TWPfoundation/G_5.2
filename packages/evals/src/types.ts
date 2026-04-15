@@ -40,6 +40,56 @@ export interface EvalAssertions {
    * No string in this array may appear in the output.
    */
   mustNotContain?: string[];
+
+  /**
+   * Selected canon document slugs that must appear in the trace.
+   */
+  selectedDocumentsMustContain?: string[];
+
+  /**
+   * Selected canon document slugs that must not appear in the trace.
+   */
+  selectedDocumentsMustNotContain?: string[];
+
+  /**
+   * Selected continuity fact ids that must appear in the trace.
+   */
+  selectedFactsMustContain?: string[];
+
+  /**
+   * Selected continuity fact ids that must not appear in the trace.
+   */
+  selectedFactsMustNotContain?: string[];
+
+  /**
+   * Selected glossary terms that must appear in the trace.
+   */
+  selectedGlossaryTermsMustContain?: string[];
+
+  /**
+   * Selected glossary terms that must not appear in the trace.
+   */
+  selectedGlossaryTermsMustNotContain?: string[];
+
+  /**
+   * Selected recovered artifact slugs that must appear in the trace.
+   */
+  selectedRecoveredArtifactsMustContain?: string[];
+
+  /**
+   * Selected recovered artifact slugs that must not appear in the trace.
+   */
+  selectedRecoveredArtifactsMustNotContain?: string[];
+
+  /**
+   * Strings that must appear in the rendered user prompt.
+   */
+  userPromptMustContain?: string[];
+
+  /**
+   * Strings that must not appear in the rendered user prompt.
+   */
+  userPromptMustNotContain?: string[];
 }
 
 export interface EvalCase {
@@ -49,11 +99,12 @@ export interface EvalCase {
   category: EvalCategory;
   userMessage: string;
   recentMessages: EvalRecentMessage[];
+  canonFixture?: string;
   assertions: EvalAssertions;
 }
 
 export interface EvalFailure {
-  type: "mustContainAny" | "mustContainAll" | "mustNotContain";
+  type: "mustContainAny" | "mustContainAll" | "mustNotContain" | "trace";
   message: string;
 }
 
@@ -64,6 +115,8 @@ export interface EvalFailure {
 export interface PipelineTrace {
   selectedDocuments: Array<{ slug: string; title: string }>;
   selectedFacts: Array<{ id: string; statement: string }>;
+  selectedGlossaryTerms: Array<{ term: string; definition: string }>;
+  selectedRecoveredArtifacts: Array<{ slug: string; title: string }>;
   systemPrompt: string;
   userPrompt: string;
   draft: string;

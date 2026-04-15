@@ -15,8 +15,12 @@ import { fileURLToPath } from "node:url";
 import { loadCases } from "./fixtures/loadCases";
 import { runSuite } from "./runners/runSuite";
 import { buildEvalProvider } from "./runners/providerFactory";
-import { printSummary } from "./reporters/consoleReporter";
+import {
+  printSummary,
+  printCategoryBreakdown,
+} from "./reporters/consoleReporter";
 import { writeJsonReport } from "./reporters/jsonReporter";
+import { buildReportMetadata } from "./reporters/reportMetadata";
 import { buildScoreReport } from "./assertions/scoreReport";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -27,10 +31,12 @@ async function main() {
   const repoRoot = path.resolve(packageRoot, "../..");
   const canonRoot = path.join(repoRoot, "packages", "canon");
   const casesDir = path.join(packageRoot, "src", "fixtures", "cases");
+  const canonFixturesRoot = path.join(packageRoot, "src", "fixtures", "canon");
   const reportsDir = path.join(packageRoot, "reports");
 
-  // Positional CLI args after -- become filter terms
-  const filter = process.argv.slice(2).filter((a) => !a.startsWith("--"));
+  const args = process.argv.slice(2);
+  const captureTrace = args.includes("--trace");
+  const filter = args.filter((a) => !a.startsWith("--"));
 
   const provider = buildEvalProvider();
   const cases = await loadCases({ casesDir, filter });
@@ -42,21 +48,33 @@ async function main() {
   }
 
   const filterMsg = filter.length > 0 ? ` [filter: ${filter.join(", ")}]` : "";
-  console.log(`Running ${cases.length} eval case(s)${filterMsg}\n`);
+  const traceMsg = captureTrace ? " [trace: on]" : "";
+  console.log(`Running ${cases.length} eval case(s)${filterMsg}${traceMsg}\n`);
 
   const { results, providerName, modelName } = await runSuite({
     cases,
     provider,
-    canonRoot,
+    defaultCanonRoot: canonRoot,
+    canonFixturesRoot,
+    captureTrace,
   });
 
   const score = buildScoreReport(results);
   printSummary(score);
+  printCategoryBreakdown(results);
+  const metadata = await buildReportMetadata({
+    canonRoot,
+    entrypoint: "packages/evals/src/index.ts",
+    captureTrace,
+    filter,
+    caseCount: cases.length,
+  });
 
   const reportPath = await writeJsonReport(
     reportsDir,
     providerName,
     modelName,
+    metadata,
     score,
     results
   );

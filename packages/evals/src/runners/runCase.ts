@@ -1,20 +1,24 @@
+import path from "node:path";
 import type { EvalCase, EvalFailure, EvalResult, PipelineTrace } from "../types";
 import type { ModelProvider } from "../../../orchestration/src/types/providers";
 import { runTurn } from "../../../orchestration/src/pipeline/runTurn";
 import { assertMatchesAny } from "../assertions/matchesAny";
 import { assertContainsAll } from "../assertions/containsAll";
 import { assertContainsNone } from "../assertions/containsNone";
+import { assertTrace } from "../assertions/trace";
 
 export interface RunCaseInput {
   evalCase: EvalCase;
   provider: ModelProvider;
-  canonRoot: string;
+  defaultCanonRoot: string;
+  canonFixturesRoot: string;
   /** Capture full pipeline trace for debug/observability. */
   captureTrace?: boolean;
 }
 
 function evaluateAssertions(
   output: string,
+  trace: PipelineTrace,
   evalCase: EvalCase
 ): EvalFailure[] {
   const { assertions } = evalCase;
@@ -22,15 +26,21 @@ function evaluateAssertions(
     ...assertMatchesAny(output, assertions.mustContainAny ?? []),
     ...assertContainsAll(output, assertions.mustContainAll ?? []),
     ...assertContainsNone(output, assertions.mustNotContain ?? []),
+    ...assertTrace(trace, assertions),
   ];
 }
 
 export async function runCase({
   evalCase,
   provider,
-  canonRoot,
+  defaultCanonRoot,
+  canonFixturesRoot,
   captureTrace = false,
 }: RunCaseInput): Promise<EvalResult> {
+  const canonRoot = evalCase.canonFixture
+    ? path.join(canonFixturesRoot, evalCase.canonFixture)
+    : defaultCanonRoot;
+
   const turn = await runTurn(provider, {
     canonRoot,
     mode: evalCase.mode,
@@ -43,28 +53,35 @@ export async function runCase({
     })),
   });
 
-  const output = turn.final;
-  const failures = evaluateAssertions(output, evalCase);
+  const trace: PipelineTrace = {
+    selectedDocuments: turn.context.selectedDocuments.map((d) => ({
+      slug: d.slug,
+      title: d.title,
+    })),
+    selectedFacts: turn.context.selectedFacts.map((f) => ({
+      id: f.id,
+      statement: f.statement,
+    })),
+    selectedGlossaryTerms: turn.context.selectedGlossaryTerms.map((term) => ({
+      term: term.term,
+      definition: term.definition,
+    })),
+    selectedRecoveredArtifacts: turn.context.selectedRecoveredArtifacts.map(
+      (artifact) => ({
+        slug: artifact.slug,
+        title: artifact.title,
+      })
+    ),
+    systemPrompt: turn.context.systemPrompt,
+    userPrompt: turn.context.userPrompt,
+    draft: turn.draft,
+    critique: turn.critique,
+    revision: turn.revision,
+    final: turn.final,
+  };
 
-  let trace: PipelineTrace | undefined;
-  if (captureTrace) {
-    trace = {
-      selectedDocuments: turn.context.selectedDocuments.map((d) => ({
-        slug: d.slug,
-        title: d.title,
-      })),
-      selectedFacts: turn.context.selectedFacts.map((f) => ({
-        id: f.id,
-        statement: f.statement,
-      })),
-      systemPrompt: turn.context.systemPrompt,
-      userPrompt: turn.context.userPrompt,
-      draft: turn.draft,
-      critique: turn.critique,
-      revision: turn.revision,
-      final: turn.final,
-    };
-  }
+  const output = turn.final;
+  const failures = evaluateAssertions(output, trace, evalCase);
 
   return {
     id: evalCase.id,
@@ -75,6 +92,6 @@ export async function runCase({
     output,
     provider: provider.name,
     model: (provider as { model?: string }).model ?? "unknown",
-    ...(trace ? { trace } : {}),
+    ...(captureTrace ? { trace } : {}),
   };
 }

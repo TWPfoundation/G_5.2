@@ -284,6 +284,21 @@ function statusHtml(v) {
     : '<span class="status fail">FAIL</span>';
 }
 
+function formatCanonicalSelections(trace) {
+  const sections = [];
+  const docs = (trace?.selectedDocuments || []).map(d => '📄 ' + d.slug + ': ' + d.title);
+  const facts = (trace?.selectedFacts || []).map(f => '• ' + f.id + ': ' + f.statement);
+  const glossary = (trace?.selectedGlossaryTerms || []).map(t => '📘 ' + t.term + ': ' + t.definition);
+  const artifacts = (trace?.selectedRecoveredArtifacts || []).map(a => '🗂 ' + a.slug + ': ' + a.title);
+
+  if (docs.length) sections.push('Documents\n' + docs.join('\n'));
+  if (facts.length) sections.push('Facts\n' + facts.join('\n'));
+  if (glossary.length) sections.push('Glossary\n' + glossary.join('\n'));
+  if (artifacts.length) sections.push('Recovered Artifacts\n' + artifacts.join('\n'));
+
+  return esc(sections.join('\n\n'));
+}
+
 // ─── State ──────────────────────────────────────────────────────────────────
 let reports = [];
 let currentReport = null;
@@ -362,10 +377,14 @@ function buildCategories(results) {
 
 function renderReport() {
   if (!currentReport) return;
-  const { provider, model, score, results } = currentReport;
+  const { provider, model, score, results, metadata } = currentReport;
   const cats = buildCategories(results);
   const passRate = score.total > 0 ? Math.round((score.passed / score.total) * 100) : 0;
   const hasTrace = results.some(r => r.trace);
+  const gitLabel = metadata?.git?.shortCommit || metadata?.git?.commit?.slice(0, 7) || 'unknown';
+  const gitState = metadata?.git?.dirty === null ? 'git unavailable' : (metadata?.git?.dirty ? 'dirty' : 'clean');
+  const canonVersion = metadata?.canon?.version || 'unknown';
+  const promptRevision = metadata?.revisions?.prompt || 'unknown';
 
   let html = '';
 
@@ -376,6 +395,9 @@ function renderReport() {
   html += `<div class="score-card"><div class="label">Passed</div><div class="value pass">${score.passed}</div></div>`;
   html += `<div class="score-card"><div class="label">Failed</div><div class="value ${score.failed>0?'fail':'pass'}">${score.failed}</div></div>`;
   html += `<div class="score-card"><div class="label">Trace</div><div class="value neutral" style="font-size:14px">${hasTrace?'● ON':'○ OFF'}</div></div>`;
+  html += `<div class="score-card"><div class="label">Git</div><div class="value neutral" style="font-size:16px">${esc(gitLabel)}</div><div class="sub">${esc(gitState)}</div></div>`;
+  html += `<div class="score-card"><div class="label">Canon</div><div class="value neutral" style="font-size:16px">${esc(canonVersion)}</div><div class="sub">${esc(metadata?.canon?.lastUpdated || 'no date')}</div></div>`;
+  html += `<div class="score-card"><div class="label">Prompt Rev</div><div class="value neutral" style="font-size:16px">${esc(promptRevision)}</div><div class="sub">${esc(metadata?.runContext?.entrypoint || 'unknown')}</div></div>`;
   html += '</div>';
 
   // Categories
@@ -428,10 +450,7 @@ function renderCaseDetail(r) {
     else if (t === 'draft') content = esc(r.trace?.draft);
     else if (t === 'critique') content = esc(r.trace?.critique);
     else if (t === 'revision') content = esc(r.trace?.revision);
-    else if (t === 'canon') {
-      content = (r.trace?.selectedDocuments||[]).map(d=>'📄 '+esc(d.slug)+': '+esc(d.title)).join('\n')
-        + '\n\n' + (r.trace?.selectedFacts||[]).map(f=>'• '+esc(f.id)+': '+esc(f.statement)).join('\n');
-    }
+    else if (t === 'canon') content = formatCanonicalSelections(r.trace);
     else if (t === 'prompt') content = esc(r.trace?.systemPrompt) + '\n\n─── USER ───\n\n' + esc(r.trace?.userPrompt);
     html += `<div class="tab-pane" data-pane="${t}" style="display:${show}"><div class="detail-content">${content}</div></div>`;
   });
@@ -600,8 +619,8 @@ function renderDiffDetail(c) {
         <div class="side-pane"><div class="side-label">B</div><div class="detail-content ${changed?'diff-marker':''}">${esc(keyB)}</div></div>
       </div>`;
     } else if (t === 'canon') {
-      const docsA = (c.traceA?.selectedDocuments||[]).map(d=>'📄 '+esc(d.slug)+': '+esc(d.title)).join('\n') + '\n\n' + (c.traceA?.selectedFacts||[]).map(f=>'• '+esc(f.id)+': '+esc(f.statement)).join('\n');
-      const docsB = (c.traceB?.selectedDocuments||[]).map(d=>'📄 '+esc(d.slug)+': '+esc(d.title)).join('\n') + '\n\n' + (c.traceB?.selectedFacts||[]).map(f=>'• '+esc(f.id)+': '+esc(f.statement)).join('\n');
+      const docsA = formatCanonicalSelections(c.traceA);
+      const docsB = formatCanonicalSelections(c.traceB);
       const changed = docsA !== docsB;
       content = `<div class="side-by-side">
         <div class="side-pane"><div class="side-label">A</div><div class="detail-content ${changed?'diff-marker':''}">${docsA}</div></div>

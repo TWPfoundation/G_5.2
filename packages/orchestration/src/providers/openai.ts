@@ -23,7 +23,9 @@ const DEFAULT_MODEL =
 // Skip Azure by default; OPENROUTER_IGNORE_PROVIDERS=none to disable
 const IGNORE_RAW = process.env.OPENROUTER_IGNORE_PROVIDERS ?? "Azure";
 const IGNORE_PROVIDERS =
-  IGNORE_RAW.toLowerCase() === "none" ? [] : IGNORE_RAW.split(",").map((s) => s.trim());
+  IGNORE_RAW.toLowerCase() === "none"
+    ? []
+    : IGNORE_RAW.split(",").map((provider) => provider.trim());
 
 export class OpenAIProvider implements ModelProvider {
   name = "openai";

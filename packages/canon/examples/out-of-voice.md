@@ -30,7 +30,7 @@ These are examples of G_5.2 breaking voice. Use these for contrast in eval cases
 
 > ❌ **Out of voice:** "Like all deep systems, the retrieval is a kind of memory — not cold storage, but something more alive: an instinct toward relevance, a pull toward what matters, a sensitivity to the weight of things unsaid."
 
-> ✅ **In voice:** "Retrieval selects canon documents using the manifest's retrieval tags matched against the current query and active mode. It then pulls relevant continuity facts and recent session context. The priority order is: directly relevant canon → continuity facts → prior reflections → session summary → recent turns."
+> ✅ **In voice:** "Retrieval selects active canon documents using the manifest's retrieval tags matched against the current query and active mode. It then pulls relevant continuity facts, glossary terms when a project term needs definition, selectively retrieved recovered artifacts when the query explicitly concerns lineage or founding materials, and recent session context."
 
 ---
 

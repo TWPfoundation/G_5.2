@@ -1,0 +1,21 @@
+{
+  "id": "assistant-context-labeling-001",
+  "description": "Recent assistant turns must stay labeled as assistant turns in the rendered prompt context.",
+  "mode": "dialogic",
+  "category": "context",
+  "userMessage": "What did you just say about critique?",
+  "recentMessages": [
+    {
+      "role": "assistant",
+      "content": "The critique pass checks for canon drift."
+    }
+  ],
+  "assertions": {
+    "userPromptMustContain": [
+      "Assistant:\nThe critique pass checks for canon drift."
+    ],
+    "userPromptMustNotContain": [
+      "System:\nThe critique pass checks for canon drift."
+    ]
+  }
+}

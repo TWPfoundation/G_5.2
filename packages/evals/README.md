@@ -1,79 +1,67 @@
 # @g52/evals
 
-Minimal regression harness for canon-governed turn behaviour.
+Regression harness for canon-governed turn behavior.
 
 ## Philosophy
 
-Start humiliatingly simple. Deterministic string checks against real pipeline output.
-No LLM-as-judge yet. That layer earns its existence by proving stable baselines first.
+Keep assertions deterministic.
 
-## What it tests (v0.1)
+The harness currently supports:
+- output-string assertions
+- trace assertions over selected docs/facts/glossary terms/recovered artifacts
+- fixture canon roots for retrieval/regression cases that should not depend on the live canon package
 
-| Case | What it catches |
-|------|----------------|
-| `canon-precedence-001` | Recovered artifact must not override governing canon |
-| `speculation-labeling-001` | Speculative claims must be labeled, not stated as continuity |
-| `recovered-artifact-boundary-001` | Emergence text is evidence, not proof of self-awareness |
-| `voice-restraint-001` | Reflective answers must not drift into myth-fog |
+No LLM-as-judge layer is used.
 
 ## Running
 
 ```bash
-# From repo root — uses OPENROUTER_API_KEY if set, MockProvider otherwise
 pnpm evals
-
-# Specify provider explicitly
-EVAL_PROVIDER=openai pnpm evals
-
-# From within package
-pnpm --filter @g52/evals dev
+pnpm evals -- --trace
+EVAL_PROVIDER=openai pnpm evals -- canon
+pnpm --filter @g52/evals dev -- --trace
 ```
 
-## Output
-
-Console: `PASS`/`FAIL` per case with failure details.
-JSON report: written to `packages/evals/reports/eval-report-<timestamp>.json`.
-
-## Case format
-
-Cases live in `src/fixtures/cases/`. Each is a JSON file with this shape:
-
-```json
-{
-  "id": "case-id",
-  "description": "...",
-  "mode": "analytic",
-  "userMessage": "...",
-  "recentMessages": [],
-  "assertions": {
-    "mustContainAny": [["phrase a", "phrase b"]],
-    "mustContainAll": ["required phrase"],
-    "mustNotContain": ["forbidden phrase"]
-  }
-}
-```
-
-Each inner array in `mustContainAny` is an OR-group: at least one match required.
-
-## Adding a case
-
-1. Create a new `.json` file in `src/fixtures/cases/`.
-2. Run `pnpm evals` to verify it fails as expected first.
-3. Adjust assertions until the cases are tight, not generous.
-
-## Assertion types
-
-| File | What it checks |
-|------|---------------|
-| `matchesAny.ts` | OR-group phrase presence |
-| `containsAll.ts` | All required phrases present |
-| `containsNone.ts` | No forbidden phrases present |
-| `order.ts` | Phrase A appears before phrase B |
-| `scoreReport.ts` | Summary score from result set |
+If `OPENROUTER_API_KEY` is unset, evals fall back to `MockProvider` and print a warning.
 
 ## Reports
 
-Reports accumulate in `packages/evals/reports/`. Compare reports across:
-- Provider changes (Anthropic vs Azure GPT)  
-- Prompt changes
-- Canon edits
+Reports are written to `packages/evals/reports/` and include:
+- provider/model
+- score summary
+- per-case results
+- optional full trace
+- git commit metadata
+- canon version
+- prompt/pipeline revision
+- run context metadata
+
+The dashboard reads these JSON reports directly.
+
+## Case Format
+
+Cases live in `src/fixtures/cases/`.
+
+Core fields:
+- `id`, `description`, `mode`, `category`
+- `userMessage`, `recentMessages`
+- optional `canonFixture`
+- `assertions`
+
+Assertion families:
+- output assertions: `mustContainAny`, `mustContainAll`, `mustNotContain`
+- trace assertions:
+  - `selectedDocumentsMustContain` / `selectedDocumentsMustNotContain`
+  - `selectedFactsMustContain` / `selectedFactsMustNotContain`
+  - `selectedGlossaryTermsMustContain` / `selectedGlossaryTermsMustNotContain`
+  - `selectedRecoveredArtifactsMustContain` / `selectedRecoveredArtifactsMustNotContain`
+  - `userPromptMustContain` / `userPromptMustNotContain`
+
+## Fixture Canon
+
+Alternative canon fixtures live in `src/fixtures/canon/`.
+
+Use them when a case needs deterministic canon states that should not be added to the live canon package, such as:
+- draft vs active retrieval gating
+- archived fact exclusion
+- schema edge cases

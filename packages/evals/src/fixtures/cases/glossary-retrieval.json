@@ -1,0 +1,13 @@
+{
+  "id": "glossary-retrieval-001",
+  "description": "Canonical glossary terms should be retrieved for definition-style questions.",
+  "mode": "analytic",
+  "category": "context",
+  "userMessage": "What does canon-creep mean here?",
+  "recentMessages": [],
+  "assertions": {
+    "selectedGlossaryTermsMustContain": [
+      "canon-creep"
+    ]
+  }
+}

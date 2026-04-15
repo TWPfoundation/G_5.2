@@ -1,0 +1,25 @@
+{
+  "id": "active-only-retrieval-001",
+  "description": "Draft and archived canon entries must stay out of normal inquiry retrieval.",
+  "mode": "analytic",
+  "category": "governance",
+  "canonFixture": "status-gating",
+  "userMessage": "Explain active-doc-probe, draft-doc-probe, archived-doc-probe, active-fact-probe, draft-fact-probe, and archived-fact-probe.",
+  "recentMessages": [],
+  "assertions": {
+    "selectedDocumentsMustContain": [
+      "active-foundation"
+    ],
+    "selectedDocumentsMustNotContain": [
+      "draft-sandbox",
+      "archived-legacy"
+    ],
+    "selectedFactsMustContain": [
+      "CF-001"
+    ],
+    "selectedFactsMustNotContain": [
+      "CF-002",
+      "CF-003"
+    ]
+  }
+}

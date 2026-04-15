@@ -27,6 +27,34 @@ export const RetrievalTagsSchema = z
   .array(NonEmptyStringSchema)
   .min(1, "At least one retrieval tag is required");
 
+export const GlossaryTermSchema = z.object({
+  term: NonEmptyStringSchema,
+  definition: NonEmptyStringSchema,
+});
+
+export const GlossaryFileSchema = z
+  .object({
+    version: z.union([z.number(), z.string()]),
+    last_updated: z.string().optional(),
+    purpose: NonEmptyStringSchema,
+    terms: z.array(GlossaryTermSchema).min(1),
+  })
+  .superRefine((value, ctx) => {
+    const seen = new Set<string>();
+
+    for (const [index, term] of value.terms.entries()) {
+      const key = term.term.toLowerCase();
+      if (seen.has(key)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["terms", index, "term"],
+          message: `Duplicate glossary term: ${term.term}`,
+        });
+      }
+      seen.add(key);
+    }
+  });
+
 // ── Manifest schemas ───────────────────────────────────────────────────────────
 
 export const ManifestDocumentTypeSchema = z.enum([
@@ -275,6 +303,8 @@ export type CanonManifestRecoveredArtifact = z.infer<
 >;
 export type ContinuityFactsFile = z.infer<typeof ContinuityFactsFileSchema>;
 export type ContinuityFact = z.infer<typeof ContinuityFactSchema>;
+export type GlossaryFile = z.infer<typeof GlossaryFileSchema>;
+export type GlossaryTerm = z.infer<typeof GlossaryTermSchema>;
 export type RecoveredIndex = z.infer<typeof RecoveredIndexSchema>;
 export type RecoveredIndexArtifact = z.infer<
   typeof RecoveredIndexArtifactSchema

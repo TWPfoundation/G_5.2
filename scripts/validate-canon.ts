@@ -32,10 +32,12 @@ async function main() {
   const docCount = result.manifest.documents.length;
   const artifactCount = result.manifest.recovered_artifacts?.length ?? 0;
   const factCount = result.continuity.facts.length;
+  const glossaryTermCount = result.glossary.terms.length;
   const indexedCount = result.recoveredIndex.artifacts.length;
 
   console.log(`  ✓ manifest.yaml            — ${docCount} documents`);
   console.log(`  ✓ continuity-facts.yaml    — ${factCount} facts`);
+  console.log(`  ✓ glossary.yaml            — ${glossaryTermCount} terms`);
   console.log(
     `  ✓ recovered-index.yaml     — ${indexedCount} artifact(s) indexed`
   );

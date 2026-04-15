@@ -1,4 +1,9 @@
-import type { CanonDocument, ContinuityFact } from "./canon";
+import type {
+  CanonDocument,
+  ContinuityFact,
+  GlossaryTerm,
+  LoadedRecoveredArtifact,
+} from "./canon";
 import type { Message } from "./messages";
 import type { Mode } from "./modes";
 
@@ -13,6 +18,8 @@ export interface BuiltContext {
   mode: Mode;
   selectedDocuments: CanonDocument[];
   selectedFacts: ContinuityFact[];
+  selectedGlossaryTerms: GlossaryTerm[];
+  selectedRecoveredArtifacts: LoadedRecoveredArtifact[];
   systemPrompt: string;
   recentMessages: Message[];
   userPrompt: string;

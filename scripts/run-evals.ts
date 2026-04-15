@@ -27,6 +27,7 @@ import {
   printCategoryBreakdown,
 } from "../packages/evals/src/reporters/consoleReporter";
 import { writeJsonReport } from "../packages/evals/src/reporters/jsonReporter";
+import { buildReportMetadata } from "../packages/evals/src/reporters/reportMetadata";
 import { buildScoreReport } from "../packages/evals/src/assertions/scoreReport";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -42,6 +43,14 @@ async function main() {
     "src",
     "fixtures",
     "cases"
+  );
+  const canonFixturesRoot = path.join(
+    repoRoot,
+    "packages",
+    "evals",
+    "src",
+    "fixtures",
+    "canon"
   );
   const reportsDir = path.join(repoRoot, "packages", "evals", "reports");
 
@@ -66,18 +75,27 @@ async function main() {
   const { results, providerName, modelName } = await runSuite({
     cases,
     provider,
-    canonRoot,
+    defaultCanonRoot: canonRoot,
+    canonFixturesRoot,
     captureTrace,
   });
 
   const score = buildScoreReport(results);
   printSummary(score);
   printCategoryBreakdown(results);
+  const metadata = await buildReportMetadata({
+    canonRoot,
+    entrypoint: "scripts/run-evals.ts",
+    captureTrace,
+    filter,
+    caseCount: cases.length,
+  });
 
   const reportPath = await writeJsonReport(
     reportsDir,
     providerName,
     modelName,
+    metadata,
     score,
     results
   );

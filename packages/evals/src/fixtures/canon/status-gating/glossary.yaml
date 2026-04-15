@@ -1,0 +1,7 @@
+version: "fixture-1"
+last_updated: "2026-04-15"
+purpose: "Fixture glossary for status-gating evals."
+
+terms:
+  - term: retrieval status
+    definition: "Fixture term used to keep glossary validation satisfied."

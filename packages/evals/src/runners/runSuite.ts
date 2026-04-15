@@ -6,7 +6,8 @@ import { printResult } from "../reporters/consoleReporter";
 export interface RunSuiteInput {
   cases: EvalCase[];
   provider: ModelProvider;
-  canonRoot: string;
+  defaultCanonRoot: string;
+  canonFixturesRoot: string;
   /** Capture full pipeline trace for each case (debug/eval mode). */
   captureTrace?: boolean;
 }
@@ -25,13 +26,20 @@ export interface SuiteRunResult {
 export async function runSuite({
   cases,
   provider,
-  canonRoot,
+  defaultCanonRoot,
+  canonFixturesRoot,
   captureTrace = false,
 }: RunSuiteInput): Promise<SuiteRunResult> {
   const results: EvalResult[] = [];
 
   for (const evalCase of cases) {
-    const result = await runCase({ evalCase, provider, canonRoot, captureTrace });
+    const result = await runCase({
+      evalCase,
+      provider,
+      defaultCanonRoot,
+      canonFixturesRoot,
+      captureTrace,
+    });
     results.push(result);
     printResult(result);
   }

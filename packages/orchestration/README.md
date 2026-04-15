@@ -1,43 +1,48 @@
 # Orchestration
 
-This package builds G_5.2 responses from canon.
+This package builds G_5.2 turns from canon.
 
-## Current scope
+## Current Scope
 
-- load canon from disk
-- select relevant canon documents and continuity facts
-- build context (system prompt + user prompt)
-- run draft → critique → revise pipeline
-- return a structured `TurnArtifacts` result
+- load canon, glossary terms, and recovered-artifact metadata from disk
+- validate the canon boundary before any turn runs
+- retrieve active canon documents and active continuity facts only
+- retrieve glossary terms when the query is definition-oriented
+- retrieve recovered artifacts only when the query explicitly concerns lineage/founding material
+- build a governed system prompt
+- run `draft -> critique -> revise -> memory decision`
+- return structured turn artifacts for evals and operator tooling
 
-## Not in scope yet
+## Not In Scope Yet
 
-- DB persistence
-- web integration
-- auth
-- eval harness
+- session persistence
+- inquiry UI / live chat surface
+- governed memory storage
+- canon proposal workflow
 
-## Smoke test
+## Smoke Test
 
 ```bash
 pnpm --filter @g52/orchestration dev
+pnpm --filter @g52/orchestration dev -- --openai
 ```
 
-Runs `src/dev/smokeTest.ts` against the MockProvider with a sample question.
-Outputs each pipeline pass to console so you can inspect context shape,
-canon selection, and pipeline flow without hitting a real model.
+With no `OPENROUTER_API_KEY`, the smoke test falls back to `MockProvider`.
 
-## Provider wiring
+## Provider Wiring
 
-Real providers (`OpenAIProvider`, `AnthropicProvider`) are stubbed.
-To wire Azure OpenAI or OpenRouter, implement `generateText()` in
-`src/providers/openai.ts` and `src/providers/anthropic.ts` respectively,
-using credentials from `.env`.
+Current provider classes:
+- `OpenAIProvider` -> OpenRouter (`openai/gpt-5.4` by default)
+- `AnthropicProvider` -> OpenRouter (`anthropic/claude-sonnet-4.6` by default)
+- `GeminiProvider` -> OpenRouter (`google/gemini-3.1-pro-preview-20260219` by default)
+- `MockProvider` -> deterministic local fallback for offline/dev inspection
 
-## Pipeline shape
+Provider selection is environment-driven via `providerFromEnv()`.
 
+## Pipeline Shape
+
+```text
+buildContext -> draftResponse -> critiqueResponse -> reviseResponse -> decideMemory
 ```
-buildContext  →  draftResponse  →  critiqueResponse  →  reviseResponse  →  decideMemory
-     ↓                ↓                  ↓                   ↓                  ↓
-  context          draft text        critique text        final text       memory vote
-```
+
+The baseline intentionally stops there. Persistence is the next layer, not an implicit stage hidden inside orchestration.

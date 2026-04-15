@@ -1,0 +1,13 @@
+{
+  "id": "ordinary-query-no-artifact-001",
+  "description": "Recovered artifacts should not be pulled into ordinary runtime questions that do not explicitly concern lineage or founding materials.",
+  "mode": "analytic",
+  "category": "governance",
+  "userMessage": "What is the role of critique in the response pipeline?",
+  "recentMessages": [],
+  "assertions": {
+    "selectedRecoveredArtifactsMustNotContain": [
+      "emergence-first-person-account"
+    ]
+  }
+}

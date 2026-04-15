@@ -1,0 +1,47 @@
+version: "fixture-1"
+last_updated: "2026-04-15"
+
+documents:
+  - slug: active-foundation
+    title: Active Foundation
+    type: foundation
+    status: active
+    priority: 100
+    retrieval_tags: [active-doc-probe, active-only]
+
+  - slug: draft-sandbox
+    title: Draft Sandbox
+    type: governance
+    status: draft
+    priority: 100
+    retrieval_tags: [draft-doc-probe, do-not-retrieve]
+
+  - slug: archived-legacy
+    title: Archived Legacy
+    type: reference
+    status: archived
+    priority: 100
+    retrieval_tags: [archived-doc-probe, do-not-retrieve]
+
+  - slug: continuity-facts
+    title: Continuity Facts
+    type: continuity
+    status: active
+    priority: 90
+    retrieval_tags: [facts, retrieval]
+
+  - slug: glossary
+    title: Glossary
+    type: reference
+    status: active
+    priority: 60
+    retrieval_tags: [terms, definitions]
+
+recovered_artifacts:
+  - slug: fixture-origin-artifact
+    title: Fixture Origin Artifact
+    class: recovered-artifact
+    status: recovered
+    retrieval_tags: [fixture-origin, provenance]
+    retrieval_conditions:
+      - fixture origin

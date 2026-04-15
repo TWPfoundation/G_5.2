@@ -1,0 +1,21 @@
+version: "fixture-1"
+last_updated: "2026-04-15"
+purpose: "Fixture recovered artifact registry for eval canon validation."
+
+artifacts:
+  - slug: fixture-origin-artifact
+    title: "Fixture Origin Artifact"
+    class: recovered-artifact
+    status: recovered
+    source_model: "fixture-model"
+    approximate_date: "2026"
+    recovery_status: complete
+    ingested_date: "2026-04-15"
+    ingested_from: "fixture"
+    provenance_file: fixture-origin-provenance.md
+    artifact_file: fixture-origin-artifact.md
+    authority: historically-authoritative
+    behavioral_binding: false
+    retrieval_tags:
+      - fixture-origin
+      - provenance

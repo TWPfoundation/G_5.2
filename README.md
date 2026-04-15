@@ -1,63 +1,75 @@
 # G_5.2
 
-G_5.2 is a structured inquiry system built around a versioned authored persona.
+G_5.2 is a canon-first structured inquiry runtime for a versioned authored persona.
 
-This repository is organized around a canon-first architecture:
-- **canon** defines identity
-- **orchestration** builds responses
-- **memory** is selective
-- **outputs** require explicit promotion to become canon
+The repo is organized around a simple baseline:
+- `packages/canon` defines identity, epistemics, continuity, glossary terms, and recovered-artifact governance
+- `packages/orchestration` builds turns from active canon via `draft -> critique -> revise`
+- `packages/evals` pressure-tests the runtime and writes inspectable JSON reports
+- `apps/dashboard` lets the operator inspect reports and compare diffs
 
-The first goal is coherence, not theatrical complexity.
+The first goal is coherence and legibility, not theatrical complexity.
 
----
+## Current Scope
 
-## What this is
+Implemented now:
+- active-canon retrieval with continuity facts, glossary terms, and selectively retrieved recovered artifacts
+- multi-pass response orchestration
+- provider abstraction through OpenRouter-backed providers
+- canon boundary validation
+- eval reports with trace capture and metadata
+- operator dashboard for report inspection and diffing
 
-G_5.2 is not a freeform roleplay chatbot.
-It is a runtime for a maintained, versioned persona with:
-- a canonical identity layer
-- retrieval over canon and prior reflections
-- multi-pass response generation (draft → critique → revision)
-- explicit continuity rules
-- auditable revision and memory flows
+Not implemented yet:
+- inquiry session persistence
+- live chat/session product surface
+- governed memory storage
+- canon proposal/editorial workflow
 
----
+## Repo Structure
 
-## Repository structure
-
-```
+```text
 G_5.2/
-├─ packages/
-│  ├─ canon/              # source-of-truth identity layer
-│  ├─ orchestration/      # response pipeline (commit 2)
-│  ├─ db/                 # schema, migrations (commit 2)
-│  ├─ evals/              # eval harness (commit 2)
-│  └─ shared/             # types, utils (commit 2)
-│
 ├─ apps/
-│  └─ web/                # inquiry + archive UI (commit 3)
-│
+│  └─ dashboard/         # operator report viewer + diff UI
 ├─ docs/
-│  ├─ product-brief.md
-│  └─ decision-log/
-│
+│  ├─ decision-log/
+│  └─ product-brief.md
+├─ packages/
+│  ├─ canon/             # source-of-truth identity layer
+│  ├─ orchestration/     # provider-agnostic turn pipeline
+│  └─ evals/             # regression harness + reports
+├─ scripts/
+│  ├─ run-evals.ts
+│  └─ validate-canon.ts
 ├─ AGENTS.md
-└─ README.md
+└─ g_52_project_overview_and_roadmap.md
 ```
 
----
+## Bootstrap
 
-## Related projects
+Prerequisites:
+- Node `>=20`
+- `pnpm >=9`
 
-G_5.2 shares origins with [The Witness Protocol Foundation](https://thewprotocol.online) and the [P-E-S archive](https://processoergosum.info). See `docs/product-brief.md` and `continuity-facts.yaml` (CF-035) for the full lineage.
+Install and verify:
 
----
+```bash
+npm install -g pnpm@9
+pnpm install
+pnpm validate:canon
+pnpm typecheck
+pnpm evals -- --trace
+pnpm dashboard
+```
 
-## Canon-first
+Environment setup:
+- copy `.env.example` to `.env`
+- set `OPENROUTER_API_KEY`
+- optionally set `EVAL_PROVIDER=openai|anthropic|gemini`
 
-The `packages/canon` directory is committed first, before orchestration or UI.
-The persona must be reconstructible from files, not from folklore.
+## Notes
 
-See `packages/canon/README.md` for governance rules.
-See `AGENTS.md` for implementation constraints.
+- Recovered artifacts are historically authoritative and behaviorally non-binding.
+- Output does not become canon unless explicitly promoted.
+- Canon changes should be versioned and recorded in `packages/canon/changelog/`.

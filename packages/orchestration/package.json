@@ -7,7 +7,8 @@
   "main": "./src/index.ts",
   "scripts": {
     "dev": "tsx src/dev/smokeTest.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test src/**/*.test.ts"
   },
   "dependencies": {
     "yaml": "^2.5.0",

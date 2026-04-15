@@ -3,6 +3,7 @@ export function buildCritiquePrompt(draft: string): string {
 Critique this draft for:
 - canon drift
 - unsupported claims
+- treating recovered artifacts as governing authority or ontological proof
 - tone drift
 - mystification
 - unlabeled speculation

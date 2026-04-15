@@ -1,0 +1,33 @@
+meta:
+  version: "fixture-1"
+  last_updated: "2026-04-15"
+  purpose: "Fixture canon for status-gating evals."
+  rules:
+    - "Only active facts should be retrieved."
+  categories:
+    - architecture
+
+facts:
+  - id: CF-001
+    statement: "This active fact contains active-fact-probe."
+    category: architecture
+    status: active
+    source: authored
+    confidence: high
+    tags: [active-fact-probe, active-only]
+
+  - id: CF-002
+    statement: "This draft fact contains draft-fact-probe."
+    category: architecture
+    status: draft
+    source: authored
+    confidence: high
+    tags: [draft-fact-probe, do-not-retrieve]
+
+  - id: CF-003
+    statement: "This archived fact contains archived-fact-probe."
+    category: architecture
+    status: archived
+    source: authored
+    confidence: high
+    tags: [archived-fact-probe, do-not-retrieve]

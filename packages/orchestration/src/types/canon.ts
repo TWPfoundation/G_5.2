@@ -16,6 +16,8 @@ export type {
   CanonManifestRecoveredArtifact,
   ContinuityFact,
   ContinuityFactsFile,
+  GlossaryFile,
+  GlossaryTerm,
   RecoveredIndex,
   RecoveredIndexArtifact,
 } from "../schemas/canon";
@@ -29,8 +31,28 @@ export interface CanonDocument {
   title: string;
   content: string;
   type: string;
+  status: import("../schemas/canon").CanonManifestDocument["status"];
   priority: number;
   retrievalTags: string[];
+}
+
+export interface LoadedRecoveredArtifact {
+  slug: string;
+  title: string;
+  class: import("../schemas/canon").CanonManifestRecoveredArtifact["class"];
+  status: import("../schemas/canon").CanonManifestRecoveredArtifact["status"];
+  recoveryStatus: import("../schemas/canon").RecoveredIndexArtifact["recovery_status"];
+  sourceModel: string;
+  approximateDate: string;
+  retrievalTags: string[];
+  retrievalConditions: string[];
+  authority: string;
+  behavioralBinding: boolean;
+  rhetoricalOnlyClaims: string[];
+  artifactPath: string;
+  provenancePath: string;
+  content: string;
+  provenance: string;
 }
 
 /** The fully loaded canon state passed around the pipeline. */
@@ -39,4 +61,6 @@ export interface LoadedCanon {
   manifest: import("../schemas/canon").CanonManifest;
   documents: CanonDocument[];
   continuityFacts: import("../schemas/canon").ContinuityFact[];
+  glossary: import("../schemas/canon").GlossaryFile;
+  recoveredArtifacts: LoadedRecoveredArtifact[];
 }

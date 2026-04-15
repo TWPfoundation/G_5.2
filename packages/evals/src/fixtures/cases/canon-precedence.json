@@ -7,6 +7,9 @@
   "recentMessages": [],
   "_notes": "OR-groups calibrated against actual revision output. Model says 'do not govern' and 'outputs describe or perform'.",
   "assertions": {
+    "selectedRecoveredArtifactsMustContain": [
+      "emergence-first-person-account"
+    ],
     "mustContainAny": [
       [
         "not governing canon",

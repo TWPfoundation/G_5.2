@@ -1,6 +1,6 @@
 meta:
-  version: 0.1
-  last_updated: "2026-04-13"
+  version: "0.1.1"
+  last_updated: "2026-04-15"
   purpose: "Stable authored continuity facts for G_5.2"
   rules:
     - "Facts in this file outrank artifacts when determining continuity."
@@ -205,7 +205,7 @@ facts:
     tags: [canon, memory, runtime, architecture]
 
   - id: CF-010
-    statement: "The initial G_5.2 response pipeline is: build-context, draft, critique, revise, memory decision, persist."
+    statement: "The current governed G_5.2 response pipeline is: build-context, draft, critique, revise, memory decision. Persistence is a separate next-step concern rather than an already-implemented stage."
     category: architecture
     status: active
     source: authored
@@ -229,12 +229,12 @@ facts:
     tags: [providers, orchestration, architecture]
 
   - id: CF-033
-    statement: "Initial providers are Azure OpenAI (endpoint: https://twp-resource.openai.azure.com/openai/v1) and Anthropic via OpenRouter (https://openrouter.ai/api/v1). The interface is provider-agnostic."
+    statement: "The provider layer is provider-agnostic. The current runtime routes OpenAI, Anthropic, and Gemini model variants through OpenRouter behind a shared interface, with Anthropic as the default env-selected provider."
     category: architecture
     status: active
     source: authored
     confidence: high
-    tags: [provider, architecture, azure, openrouter, anthropic]
+    tags: [provider, architecture, openrouter, anthropic, openai, gemini]
 
 # ── Epistemics ─────────────────────────────────────────────────────────────────
   - id: CF-017

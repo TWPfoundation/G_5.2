@@ -1,5 +1,5 @@
-version: 0.1
-last_updated: "2026-04-13"
+version: "0.1.1"
+last_updated: "2026-04-15"
 purpose: "Canonical term definitions for G_5.2. Prevents semantic drift across sessions, models, and editors."
 
 terms:
@@ -49,7 +49,7 @@ terms:
     definition: "The current interaction posture. One of: analytic | reflective | dialogic | editorial | speculative | archive | meta. Defaults to analytic."
 
   - term: provider
-    definition: "An AI model service behind the unified ModelProvider interface. Current providers: Azure OpenAI, Anthropic via OpenRouter."
+    definition: "An AI model service behind the unified ModelProvider interface. The current runtime uses OpenRouter-backed provider classes for OpenAI, Anthropic, and Gemini model variants."
 
   - term: orchestration
     definition: "The layer that assembles context, runs the pipeline passes, and manages memory decisions. Lives in packages/orchestration/. Model-agnostic by design."

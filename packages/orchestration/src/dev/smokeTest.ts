@@ -2,8 +2,8 @@
  * smokeTest.ts — dev harness for the full turn pipeline.
  *
  * Provider selection (in order):
- *   1. OPENROUTER_API_KEY set → AnthropicProvider (claude-sonnet-4-5) by default,
- *      or pass --openai flag to use OpenAIProvider (gpt-4.5)
+ *   1. OPENROUTER_API_KEY set -> AnthropicProvider (claude-sonnet-4.6) by default,
+ *      or pass --openai flag to use OpenAIProvider (openai/gpt-5.4)
  *   2. No key → MockProvider (always works, tests pipeline shape)
  *
  * Run:

@@ -2,11 +2,13 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { EvalResult } from "../types";
 import type { ScoreReport } from "../assertions/scoreReport";
+import type { JsonReportMetadata } from "./reportMetadata";
 
 export interface JsonReport {
   generatedAt: string;
   provider: string;
   model: string;
+  metadata: JsonReportMetadata;
   score: ScoreReport;
   results: EvalResult[];
 }
@@ -20,6 +22,7 @@ export async function writeJsonReport(
   reportsDir: string,
   providerName: string,
   modelName: string,
+  metadata: JsonReportMetadata,
   score: ScoreReport,
   results: EvalResult[]
 ): Promise<string> {
@@ -35,6 +38,7 @@ export async function writeJsonReport(
     generatedAt: new Date().toISOString(),
     provider: providerName,
     model: modelName,
+    metadata,
     score,
     results,
   };

@@ -41,19 +41,19 @@ A convincing persona is not a single prompt. It is a system:
 - Canon drift is rare and caught by the critique pass
 - Chat feels coherent within a session
 - New reflections can be generated and approved through a repeatable flow
-- Swapping GPT-4 / Claude does not collapse persona identity
+- Swapping OpenAI / Anthropic / Gemini providers does not collapse persona identity
 - The system's behavior is auditable at each step
 
-## v0.1 deliverables
+## Current state
 
 | Deliverable | Status |
 |-------------|--------|
-| Workspace repo | ✅ Commit 1 |
-| Canon package | ✅ Commit 1 |
-| Orchestration pipeline | ○ Commit 2 |
-| Session persistence | ○ Commit 2 |
-| Inquiry UI | ○ Commit 3 |
-| Eval harness | ○ Commit 2 |
+| Canon package | ✅ Implemented |
+| Orchestration pipeline | ✅ Implemented |
+| Eval harness | ✅ Implemented |
+| Operator dashboard | ✅ Implemented |
+| Session persistence | ○ Next major step |
+| Inquiry surface | ○ Next major step |
 
 ## Not in v0.1
 
@@ -67,11 +67,12 @@ A convincing persona is not a single prompt. It is a system:
 
 | Phase | Scope |
 |-------|-------|
-| 0 — Foundation | Canon package, DB schema, provider abstraction, local dev pipeline |
-| 1 — Inquiry MVP | Sessions, messages, response pipeline, simple chat UI, session summaries |
-| 2 — Reflection system | Proposal flow, draft + critique + revision, publishing to archive |
-| 3 — Editorial controls | Inspect memory, inspect retrieved context, cross-model comparison |
-| 4 — Public hardening | Auth, rate limits, monitoring, error handling |
+| 0 — Foundation | Canon package, provider abstraction, canon validation, orchestration baseline, eval harness |
+| 1 — Governance baseline hardening | Active-only retrieval, glossary/recovered-artifact runtime support, report metadata, operator diffing |
+| 2 — Inquiry MVP | Sessions, messages, response persistence, simple operator inquiry UI, session summaries |
+| 3 — Reflection system | Proposal flow, draft + critique + revision, publishing to archive |
+| 4 — Editorial controls | Inspect memory, inspect retrieved context, cross-model comparison |
+| 5 — Public hardening | Auth, rate limits, monitoring, error handling |
 
 ## Key risks
 

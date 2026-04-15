@@ -1,7 +1,7 @@
 /**
  * Anthropic provider — routed through OpenRouter.
  *
- * Uses model: anthropic/claude-sonnet-4-5 by default.
+ * Uses model: anthropic/claude-sonnet-4.6 by default.
  * Override with OPENROUTER_ANTHROPIC_MODEL env var.
  *
  * Note on model name: verify availability at:
