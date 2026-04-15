@@ -53,7 +53,7 @@ A convincing persona is not a single prompt. It is a system:
 | Eval harness | ✅ Implemented |
 | Operator dashboard | ✅ Implemented |
 | Session persistence | ✅ Implemented (minimal file-backed layer) |
-| Inquiry surface | ○ Next major step |
+| Inquiry surface | ✅ Implemented (minimal operator dashboard inquiry UI) |
 
 ## Not in v0.1
 
@@ -70,6 +70,7 @@ A convincing persona is not a single prompt. It is a system:
 | 0 — Foundation | Canon package, provider abstraction, canon validation, orchestration baseline, eval harness |
 | 1 — Governance baseline hardening | Active-only retrieval, glossary/recovered-artifact runtime support, report metadata, operator diffing |
 | 2 — Inquiry MVP | Session-connected inquiry flow, simple operator inquiry UI, richer summaries, response review |
+| 2.5 — Operator refinement | Better session browsing, turn inspection, lighter report ergonomics |
 | 3 — Reflection system | Proposal flow, draft + critique + revision, publishing to archive |
 | 4 — Editorial controls | Inspect memory, inspect retrieved context, cross-model comparison |
 | 5 — Public hardening | Auth, rate limits, monitoring, error handling |
@@ -82,4 +83,5 @@ A convincing persona is not a single prompt. It is a system:
 | Provider drift | Unified canon pack, critique pass, cross-model evals |
 | Memory pollution | Strict memory policy and confidence thresholds |
 | Architecture inflation | Keep v0.1 to draft → critique → revision only |
+
 

@@ -20,9 +20,9 @@ Implemented now:
 - eval reports with trace capture and metadata
 - minimal inquiry session persistence with rolling summaries and recent-turn carryover
 - operator dashboard for report inspection and diffing
+- minimal operator inquiry surface backed by persisted sessions
 
 Not implemented yet:
-- live chat/session product surface
 - governed memory storage
 - canon proposal/editorial workflow
 
@@ -73,4 +73,5 @@ Environment setup:
 - Recovered artifacts are historically authoritative and behaviorally non-binding.
 - Output does not become canon unless explicitly promoted.
 - Canon changes should be versioned and recorded in `packages/canon/changelog/`.
+
 

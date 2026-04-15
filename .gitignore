@@ -39,3 +39,7 @@ coverage/
 
 # Eval reports (local comparison artifacts — do not commit)
 packages/evals/reports/
+
+# Runtime inquiry sessions
+data/inquiry-sessions/
+

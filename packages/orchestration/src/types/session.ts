@@ -1,6 +1,15 @@
 import type { Mode } from "./modes";
 import type { TurnArtifacts } from "./pipeline";
 
+export interface SessionContextSnapshot {
+  selectedDocuments: Array<{ slug: string; title: string }>;
+  selectedFacts: Array<{ id: string; statement: string }>;
+  selectedGlossaryTerms: Array<{ term: string; definition: string }>;
+  selectedRecoveredArtifacts: Array<{ slug: string; title: string }>;
+  hadSessionSummary: boolean;
+  recentMessageCount: number;
+}
+
 export interface SessionTurnRecord {
   id: string;
   createdAt: string;
@@ -8,6 +17,7 @@ export interface SessionTurnRecord {
   userMessage: string;
   assistantMessage: string;
   memoryDecision: TurnArtifacts["memoryDecision"];
+  contextSnapshot?: SessionContextSnapshot;
 }
 
 export interface InquirySession {

@@ -4,6 +4,7 @@ import type { ModelProvider } from "../types/providers";
 import type {
   InquirySession,
   RunSessionTurnInput,
+  SessionContextSnapshot,
   SessionTurnArtifacts,
   SessionTurnRecord,
 } from "../types/session";
@@ -65,6 +66,33 @@ function summarizeTurns(turns: SessionTurnRecord[]): string | null {
   return truncateToTokens(summary, MAX_SUMMARY_TOKENS);
 }
 
+function buildContextSnapshot(
+  turn: SessionTurnArtifacts["context"]
+): SessionContextSnapshot {
+  return {
+    selectedDocuments: turn.selectedDocuments.map((doc) => ({
+      slug: doc.slug,
+      title: doc.title,
+    })),
+    selectedFacts: turn.selectedFacts.map((fact) => ({
+      id: fact.id,
+      statement: fact.statement,
+    })),
+    selectedGlossaryTerms: turn.selectedGlossaryTerms.map((term) => ({
+      term: term.term,
+      definition: term.definition,
+    })),
+    selectedRecoveredArtifacts: turn.selectedRecoveredArtifacts.map(
+      (artifact) => ({
+        slug: artifact.slug,
+        title: artifact.title,
+      })
+    ),
+    hadSessionSummary: Boolean(turn.sessionSummary),
+    recentMessageCount: turn.recentMessages.length,
+  };
+}
+
 export async function runSessionTurn(
   provider: ModelProvider,
   input: RunSessionTurnInput
@@ -91,6 +119,7 @@ export async function runSessionTurn(
     userMessage: input.userMessage,
     assistantMessage: turn.final,
     memoryDecision: turn.memoryDecision,
+    contextSnapshot: buildContextSnapshot(turn.context),
   };
 
   const turns = [...existing.turns, persistedTurn];
