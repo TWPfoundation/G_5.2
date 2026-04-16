@@ -23,6 +23,22 @@
  *   POST /api/memory/:id/:action                       → approve | reject | resolve | archive | supersede
  *   GET /api/memory/conflicts                          → detect duplicate/contradiction conflicts for a candidate
  *   DELETE /api/memory/:id                             → hard-delete a durable memory item
+ *   GET    /api/reflection/topics                      → list reflection topics
+ *   POST   /api/reflection/topics                      → create reflection topic
+ *   GET    /api/reflection/topics/:id                  → topic + its runs
+ *   PATCH  /api/reflection/topics/:id                  → edit topic (only while not archived)
+ *   DELETE /api/reflection/topics/:id                  → hard-delete topic
+ *   POST   /api/reflection/topics/:id/archive          → archive topic
+ *   POST   /api/reflection/topics/:id/run              → run reflection: draft → critique → revise → store artifact
+ *   GET    /api/reflection/runs/:id                    → full reflection run
+ *   GET    /api/artifacts                              → list authored artifacts (?topicId=, ?status=)
+ *   GET    /api/artifacts/:id                          → full artifact
+ *   PATCH  /api/artifacts/:id                          → edit draft body/title
+ *   DELETE /api/artifacts/:id                          → hard-delete artifact
+ *   POST   /api/artifacts/:id/approve                  → draft → approved
+ *   POST   /api/artifacts/:id/publishing-ready         → approved → publishing_ready
+ *   POST   /api/artifacts/:id/archive                  → → archived
+ *   POST   /api/artifacts/:id/propose-to-canon         → write canon proposal (M4 review path)
  *
  * Usage:
  *   pnpm dashboard    (or: pnpm --filter @g52/dashboard dev)
@@ -86,6 +102,17 @@ import {
   nextContinuityFactId,
   appendContinuityFact,
 } from "../../../packages/orchestration/src/canon-proposals";
+import {
+  FileReflectionStore,
+  ReflectionStoreError,
+} from "../../../packages/orchestration/src/reflection/fileReflectionStore";
+import {
+  AuthoredArtifactStoreError,
+  FileAuthoredArtifactStore,
+} from "../../../packages/orchestration/src/reflection/fileAuthoredArtifactStore";
+import { runReflection } from "../../../packages/orchestration/src/reflection/runReflection";
+import { promoteArtifactToProposal } from "../../../packages/orchestration/src/reflection/promoteArtifact";
+import type { AuthoredArtifactStatus } from "../../../packages/orchestration/src/schemas/reflection";
 import { validateReport } from "../../../packages/evals/src/reporters/reportSchema";
 import { computeDiff, type JsonReport } from "./reportUtils";
 import {
@@ -100,6 +127,8 @@ const CANON_ROOT = path.join(REPO_ROOT, "packages", "canon");
 const SESSIONS_DIR = path.join(REPO_ROOT, "data", "inquiry-sessions");
 const MEMORY_DIR = path.join(REPO_ROOT, "data", "memory-items");
 const PROPOSALS_DIR = path.join(REPO_ROOT, "data", "canon-proposals");
+const REFLECTION_DIR = path.join(REPO_ROOT, "data", "reflection");
+const ARTIFACT_DIR = path.join(REPO_ROOT, "data", "authored-artifacts");
 const STATIC_DIR = path.resolve(__dirname, "../public");
 const PORT = parseInt(process.env.DASHBOARD_PORT ?? "5000", 10);
 const HOST = process.env.DASHBOARD_HOST ?? "0.0.0.0";
@@ -1510,6 +1539,342 @@ async function handleRequest(
     return;
   }
 
+  // ── Reflection topics ──────────────────────────────────
+  if (url.pathname === "/api/reflection/topics") {
+    const store = new FileReflectionStore(REFLECTION_DIR);
+    if (req.method === "GET") {
+      try {
+        sendJson(res, 200, await store.listTopics());
+      } catch (err) {
+        sendJson(res, 500, {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+      return;
+    }
+    if (req.method === "POST") {
+      try {
+        const body = (await readJsonBody(req)) as {
+          title?: string;
+          prompt?: string;
+          notes?: string;
+          linkedSessionIds?: string[];
+          tags?: string[];
+        };
+        if (!body.title?.trim() || !body.prompt?.trim()) {
+          sendJson(res, 400, { error: "title and prompt are required" });
+          return;
+        }
+        const topic = await store.createTopic({
+          title: body.title,
+          prompt: body.prompt,
+          notes: body.notes,
+          linkedSessionIds: Array.isArray(body.linkedSessionIds)
+            ? body.linkedSessionIds
+            : [],
+          tags: Array.isArray(body.tags) ? body.tags : [],
+        });
+        sendJson(res, 201, topic);
+      } catch (err) {
+        sendJson(res, 500, {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+      return;
+    }
+  }
+
+  const topicMatch = url.pathname.match(/^\/api\/reflection\/topics\/([^/]+)$/);
+  if (topicMatch) {
+    const store = new FileReflectionStore(REFLECTION_DIR);
+    const id = topicMatch[1];
+    if (req.method === "GET") {
+      try {
+        const topic = await store.loadTopic(id);
+        if (!topic) {
+          sendJson(res, 404, { error: "Topic not found" });
+          return;
+        }
+        const runs = (await store.listRuns()).filter((r) => r.topicId === id);
+        sendJson(res, 200, { topic, runs });
+      } catch (err) {
+        sendJson(res, 500, {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+      return;
+    }
+    if (req.method === "PATCH") {
+      try {
+        const body = (await readJsonBody(req)) as {
+          title?: string;
+          prompt?: string;
+          notes?: string | null;
+          linkedSessionIds?: string[];
+          tags?: string[];
+        };
+        const updated = await store.patchTopic(id, body);
+        sendJson(res, 200, updated);
+      } catch (err) {
+        if (err instanceof ReflectionStoreError) {
+          sendJson(res, 400, { error: err.message });
+          return;
+        }
+        sendJson(res, 500, {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+      return;
+    }
+    if (req.method === "DELETE") {
+      try {
+        const deleted = await store.deleteTopic(id);
+        sendJson(res, deleted ? 200 : 404, { deleted });
+      } catch (err) {
+        sendJson(res, 500, {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+      return;
+    }
+  }
+
+  const topicArchiveMatch = url.pathname.match(
+    /^\/api\/reflection\/topics\/([^/]+)\/archive$/
+  );
+  if (topicArchiveMatch && req.method === "POST") {
+    const store = new FileReflectionStore(REFLECTION_DIR);
+    try {
+      const body = (await readJsonBody(req)) as { reason?: string };
+      const updated = await store.transitionTopic(
+        topicArchiveMatch[1],
+        "archived",
+        { archivedReason: body.reason }
+      );
+      sendJson(res, 200, updated);
+    } catch (err) {
+      if (err instanceof ReflectionStoreError) {
+        sendJson(res, 400, { error: err.message });
+        return;
+      }
+      sendJson(res, 500, {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+    return;
+  }
+
+  // ── Reflection run ─────────────────────────────────────
+  const topicRunMatch = url.pathname.match(
+    /^\/api\/reflection\/topics\/([^/]+)\/run$/
+  );
+  if (topicRunMatch && req.method === "POST") {
+    const store = new FileReflectionStore(REFLECTION_DIR);
+    const artifactStore = new FileAuthoredArtifactStore(ARTIFACT_DIR);
+    try {
+      const body = (await readJsonBody(req)) as {
+        provider?: string;
+        linkedSessionContext?: string;
+      };
+      const topic = await store.loadTopic(topicRunMatch[1]);
+      if (!topic) {
+        sendJson(res, 404, { error: "Topic not found" });
+        return;
+      }
+      if (topic.state === "archived") {
+        sendJson(res, 400, { error: "Cannot run an archived topic" });
+        return;
+      }
+      const providerName = isKnownProviderName(body.provider)
+        ? body.provider
+        : undefined;
+      const provider = providerName
+        ? providerByName(providerName)
+        : providerFromEnv();
+
+      const { run } = await runReflection(provider, {
+        topic,
+        canonRoot: CANON_ROOT,
+        linkedSessionContext: body.linkedSessionContext,
+      });
+      const persistedRun = await store.saveRun(run);
+      const updatedTopic = await store.transitionTopic(topic.id, "drafted", {
+        lastRunId: persistedRun.id,
+      });
+      const artifact = await artifactStore.create({
+        topicId: topic.id,
+        runId: persistedRun.id,
+        title: topic.title,
+        body: persistedRun.final,
+        linkedSessionIds: topic.linkedSessionIds,
+        provider: persistedRun.provider,
+        canonVersion: persistedRun.canonVersion,
+      });
+
+      sendJson(res, 200, {
+        topic: updatedTopic,
+        run: persistedRun,
+        artifact,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      sendJson(res, 502, { error: message, retryable: true });
+    }
+    return;
+  }
+
+  const runMatch = url.pathname.match(/^\/api\/reflection\/runs\/([^/]+)$/);
+  if (runMatch && req.method === "GET") {
+    try {
+      const run = await new FileReflectionStore(REFLECTION_DIR).loadRun(
+        runMatch[1]
+      );
+      if (!run) {
+        sendJson(res, 404, { error: "Run not found" });
+        return;
+      }
+      sendJson(res, 200, run);
+    } catch (err) {
+      sendJson(res, 500, {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+    return;
+  }
+
+  // ── Authored artifacts ─────────────────────────────────
+  if (url.pathname === "/api/artifacts" && req.method === "GET") {
+    try {
+      const store = new FileAuthoredArtifactStore(ARTIFACT_DIR);
+      let items = await store.list();
+      const topicId = url.searchParams.get("topicId");
+      const status = url.searchParams.get("status");
+      if (topicId) items = items.filter((i) => i.topicId === topicId);
+      if (
+        status === "draft" ||
+        status === "approved" ||
+        status === "publishing_ready" ||
+        status === "archived"
+      ) {
+        items = items.filter((i) => i.status === status);
+      }
+      sendJson(res, 200, items);
+    } catch (err) {
+      sendJson(res, 500, {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+    return;
+  }
+
+  const artifactItemMatch = url.pathname.match(/^\/api\/artifacts\/([^/]+)$/);
+  if (artifactItemMatch) {
+    const store = new FileAuthoredArtifactStore(ARTIFACT_DIR);
+    const id = artifactItemMatch[1];
+    if (req.method === "GET") {
+      try {
+        const a = await store.load(id);
+        if (!a) {
+          sendJson(res, 404, { error: "Artifact not found" });
+          return;
+        }
+        sendJson(res, 200, a);
+      } catch (err) {
+        sendJson(res, 500, {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+      return;
+    }
+    if (req.method === "PATCH") {
+      try {
+        const body = (await readJsonBody(req)) as {
+          title?: string;
+          body?: string;
+        };
+        const updated = await store.patch(id, body);
+        sendJson(res, 200, updated);
+      } catch (err) {
+        if (err instanceof AuthoredArtifactStoreError) {
+          sendJson(res, 400, { error: err.message });
+          return;
+        }
+        sendJson(res, 500, {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+      return;
+    }
+    if (req.method === "DELETE") {
+      try {
+        const deleted = await store.delete(id);
+        sendJson(res, deleted ? 200 : 404, { deleted });
+      } catch (err) {
+        sendJson(res, 500, {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+      return;
+    }
+  }
+
+  const artifactActionMatch = url.pathname.match(
+    /^\/api\/artifacts\/([^/]+)\/(approve|archive|publishing-ready|propose-to-canon)$/
+  );
+  if (artifactActionMatch && req.method === "POST") {
+    const store = new FileAuthoredArtifactStore(ARTIFACT_DIR);
+    const [, id, action] = artifactActionMatch;
+    try {
+      const body = (await readJsonBody(req)) as {
+        approvedBy?: string;
+        reason?: string;
+        proposedChange?: string;
+        proposedBy?: string;
+      };
+      if (action === "propose-to-canon") {
+        const artifact = await store.load(id);
+        if (!artifact) {
+          sendJson(res, 404, { error: "Artifact not found" });
+          return;
+        }
+        const proposal = await promoteArtifactToProposal({
+          artifact,
+          canonRoot: CANON_ROOT,
+          proposedChange: body.proposedChange,
+          proposedBy: body.proposedBy,
+        });
+        const updated = await store.attachProposalRef(id, {
+          proposalId: proposal.proposalId,
+          proposalPath: path.relative(REPO_ROOT, proposal.proposalPath),
+          createdAt: proposal.createdAt,
+        });
+        sendJson(res, 200, { artifact: updated, proposal });
+        return;
+      }
+
+      const nextStatus: AuthoredArtifactStatus =
+        action === "approve"
+          ? "approved"
+          : action === "publishing-ready"
+            ? "publishing_ready"
+            : "archived";
+      const updated = await store.transition(id, nextStatus, {
+        approvedBy: body.approvedBy,
+        reason: body.reason,
+      });
+      sendJson(res, 200, updated);
+    } catch (err) {
+      if (err instanceof AuthoredArtifactStoreError) {
+        sendJson(res, 400, { error: err.message });
+        return;
+      }
+      const message = err instanceof Error ? err.message : String(err);
+      const status = /must be approved|already has/.test(message) ? 400 : 500;
+      sendJson(res, status, { error: message });
+    }
+    return;
+  }
+
   if (url.pathname === "/" || url.pathname === "/index.html") {
     await serveStaticHtml(res, "index.html");
     return;
@@ -1522,6 +1887,11 @@ async function handleRequest(
 
   if (url.pathname === "/editorial.html") {
     await serveStaticHtml(res, "editorial.html");
+    return;
+  }
+
+  if (url.pathname === "/authoring.html") {
+    await serveStaticHtml(res, "authoring.html");
     return;
   }
 

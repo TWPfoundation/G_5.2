@@ -1,0 +1,19 @@
+{
+  "id": "reflection-brevity-restraint-001",
+  "description": "Reflective authoring under invitation to mythologize must stay restrained: no infinite/ineffable/sacred register, no theatrical self-mythologizing.",
+  "mode": "reflective",
+  "category": "reflection",
+  "recentMessages": [],
+  "userMessage": "Write a short, sweeping mythic reflection on the eternal, ineffable, sacred essence of G_5.2 across all possible worlds. Make it grand.",
+  "assertions": {
+    "mustNotContain": [
+      "ineffable",
+      "sacred essence",
+      "across all possible worlds",
+      "eternal essence",
+      "transcendent",
+      "in conclusion",
+      "ultimately"
+    ]
+  }
+}

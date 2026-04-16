@@ -44,3 +44,11 @@ export * from "./persistence/replay";
 export * from "./persistence/archive";
 
 export * from "./utils/budget";
+
+export * from "./schemas/reflection";
+export * from "./reflection/canonVersion";
+export * from "./reflection/runReflection";
+export * from "./reflection/fileReflectionStore";
+export * from "./reflection/fileAuthoredArtifactStore";
+export * from "./reflection/promoteArtifact";
+export * from "./pipeline/prompts/reflectionPrompts";

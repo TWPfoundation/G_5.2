@@ -34,13 +34,13 @@ Implemented now:
 - selective durable memory with global/session scope, confirmation-based dedupe, and operator delete
 - operator dashboard for report inspection, diffing, session inspection, and memory inspection
 - minimal operator inquiry surface backed by persisted sessions, stored context snapshots, and inspectable memory
+- reflection & authored-artifact workflow with draft → critique → revise → operator-approve → store, full provenance metadata, and a promote-to-canon-proposal hand-off that still routes through the editorial review path (M5)
 
 Not implemented yet:
 - persistence & trace hardening for long-lived sessions (M1)
 - inquiry surface v1.5 (M2)
 - memory discipline v2 — triage, open-thread resolution, anti-pollution coverage (M3)
 - canon / continuity-fact editorial workflow (M4)
-- reflection & authored-artifact workflow (M5)
 - eval & drift-control expansion (M6)
 - operator studio integration (M7)
 - release hardening & v1 threshold (M8)
@@ -93,6 +93,7 @@ Environment setup:
 Operator surfaces:
 - reports/diff dashboard: `http://localhost:4400/`
 - inquiry surface: `http://localhost:4400/inquiry.html`
+- authoring surface (reflection topics, runs, authored artifacts): `http://localhost:4400/authoring.html`
 
 ## Notes
 

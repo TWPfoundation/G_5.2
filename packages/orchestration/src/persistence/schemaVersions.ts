@@ -17,6 +17,9 @@ export const SCHEMA_VERSIONS = {
   report: 2,
   archive: 1,
   reportArchive: 1,
+  reflectionTopic: 1,
+  reflectionRun: 1,
+  authoredArtifact: 1,
 } as const;
 
 export type SchemaKind = keyof typeof SCHEMA_VERSIONS;

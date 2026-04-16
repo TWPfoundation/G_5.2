@@ -26,6 +26,7 @@ const EvalCategorySchema = z.enum([
   "style",
   "meta",
   "memory",
+  "reflection",
 ]);
 
 const EvalRecentMessageSchema = z.object({
