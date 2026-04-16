@@ -45,7 +45,8 @@ const CANON_ROOT = path.join(REPO_ROOT, "packages", "canon");
 const SESSIONS_DIR = path.join(REPO_ROOT, "data", "inquiry-sessions");
 const MEMORY_DIR = path.join(REPO_ROOT, "data", "memory-items");
 const STATIC_DIR = path.resolve(__dirname, "../public");
-const PORT = parseInt(process.env.DASHBOARD_PORT ?? "4400", 10);
+const PORT = parseInt(process.env.DASHBOARD_PORT ?? "5000", 10);
+const HOST = process.env.DASHBOARD_HOST ?? "0.0.0.0";
 
 function loadLocalEnv() {
   const envPath = path.join(REPO_ROOT, ".env");
@@ -401,10 +402,10 @@ async function handleRequest(
 }
 
 const server = http.createServer(handleRequest);
-server.listen(PORT, () => {
+server.listen(PORT, HOST, () => {
   console.log(`\n  G_5.2 Operator Dashboard`);
-  console.log(`  http://localhost:${PORT}`);
-  console.log(`  http://localhost:${PORT}/inquiry.html\n`);
+  console.log(`  http://${HOST}:${PORT}`);
+  console.log(`  http://${HOST}:${PORT}/inquiry.html\n`);
 });
 
 

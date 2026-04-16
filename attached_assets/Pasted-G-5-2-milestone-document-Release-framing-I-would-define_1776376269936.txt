@@ -1,0 +1,430 @@
+G_5.2 milestone document
+Release framing
+
+I would define the release path like this:
+
+Current state: operator-grade governed runtime
+Next threshold: editorial-grade governed runtime
+Next threshold: reflection-grade authored system
+Release threshold: G_5.2 v1 / first complete usable system
+
+This matches the repo’s current shape better than trying to jump straight from “working repo” to “public product.” The product brief is very clear that public launch is not the immediate goal .
+
+Milestone 0 — Baseline lock and source-of-truth cleanup
+Purpose
+
+Freeze the current foundation so future work builds on a stable, shared definition of the system.
+
+Why this comes first
+
+The README is already ahead of the roadmap and should now become the canonical status view. The roadmap still reflects an earlier state in a few places, so the very first move is documentation convergence .
+
+Scope
+align README, roadmap, and product brief
+define the official subsystem map
+define release terminology
+define what is in v1 and what is explicitly after v1
+freeze core invariants:
+canon is source of truth
+output is not canon unless promoted
+memory is selective
+provider portability remains intact
+Dependencies
+
+None. This is the foundation milestone.
+
+Done means
+one authoritative repo-wide project status exists
+one authoritative milestone ladder exists
+the roadmap no longer contradicts the README
+v1 scope and non-scope are written down
+architectural invariants are documented once and referenced everywhere
+Main artifacts
+updated roadmap
+updated product brief if needed
+docs/system-map.md
+docs/release-criteria.md
+Milestone 1 — Persistence and trace hardening
+Purpose
+
+Turn the current persistence layer into a durable substrate for editing, review, replay, and audit.
+
+Why this matters
+
+The system already has minimal inquiry session persistence, summaries, recent-turn carryover, and file-backed memory . Before editorial workflow gets richer, those stored objects need to become more stable and inspectable.
+
+Scope
+version schemas for:
+session
+turn
+summary
+memory item
+trace object
+report object
+add migration rules for schema evolution
+make context snapshots first-class and always linkable to turns
+normalize metadata across inquiry and eval runs:
+provider
+model
+canon version
+prompt revision
+commit SHA
+support replay/rerun inputs from persisted traces
+add archive/export/import paths for sessions and reports
+Dependencies
+Milestone 0 complete
+Done means
+every persisted object has a schema version
+old data can be upgraded or cleanly rejected with explanation
+every turn can be traced back to its context snapshot
+every eval/report can be tied to commit and canon state
+session and report data can survive iteration without becoming brittle
+Main artifacts
+schema docs
+migration utilities
+trace contract docs
+persistence tests
+Milestone 2 — Inquiry surface v1.5
+Purpose
+
+Upgrade the operator inquiry surface from “usable” to “daily-usable.”
+
+Why this matters
+
+The README already says the dashboard supports session inspection, memory inspection, diffing, and inquiry handling . The next step is not a bigger front-end; it is making the existing one operationally excellent.
+
+Scope
+improve session browsing:
+search
+tags
+sort
+archive state
+improve turn inspection:
+selected canon docs
+selected continuity facts
+selected glossary terms
+selected recovered artifacts
+draft
+critique
+revision
+final
+add “why memory was stored / skipped”
+add rerun and compare-by-provider
+improve retrieved-context drawer
+add session-level summary health view
+add clearer failure and retry behavior in inquiry runs
+Dependencies
+Milestone 1 complete, because richer inspection depends on hardened traces
+Done means
+an operator can understand a turn without reading raw files
+an operator can compare two runs without repo surgery
+memory decisions are visible at turn level
+session browsing supports real usage over time
+inquiry remains lean rather than overdesigned
+Main artifacts
+inquiry UX improvements
+turn provenance view
+rerun/compare controls
+Milestone 3 — Memory discipline v2
+Purpose
+
+Promote memory from “selective storage exists” to “governed memory system.”
+
+Why this matters
+
+The product brief defines durable memory as selective and anti-pollution oriented, not a giant long-term memory web . The README says memory is implemented, but manual create/edit/approval is still missing . This milestone completes that organ.
+
+Scope
+define memory classes:
+stable preference
+project decision
+unresolved thread
+session-local context
+operator note
+rejected candidate
+add memory state machine:
+proposed
+accepted
+rejected
+superseded
+resolved
+archived
+add manual create/edit/delete
+add explicit approval path where needed
+add contradiction and duplicate detection
+add resolution flow for open threads
+add provenance fields:
+source turn
+justification
+scope
+confidence
+add anti-pollution evals for longer-lived sessions
+Dependencies
+Milestone 1 complete
+Milestone 2 strongly preferred, because memory review is best done inside the operator surface
+Done means
+memory can be created, edited, approved, rejected, resolved, and removed
+every memory item has provenance and scope
+open threads can be closed cleanly
+redundant/sentimental memory no longer accumulates silently
+evals explicitly test memory pollution and contradiction behavior
+Main artifacts
+memory schema v2
+memory review UI
+memory lifecycle tests
+new eval suites
+Milestone 4 — Canon editorial workflow
+Purpose
+
+Turn canon evolution into a first-class workflow instead of a manual repo ritual.
+
+Why this matters
+
+Both the README and roadmap identify canon proposal/editorial workflow as the major missing subsystem . This is the hinge milestone. Once this exists, G_5.2 stops being only a governed runtime and becomes a governed authored system.
+
+Scope
+define proposal object model:
+proposal type
+target
+rationale
+provenance
+source material
+reviewer notes
+status
+support proposal creation from:
+inquiry turns
+memory items
+manual operator drafting
+reflection outputs
+add review workflow:
+pending
+accepted
+rejected
+needs revision
+add continuity-fact drafting path
+add canon revision diffing
+add changelog generation support
+add explicit promotion controls:
+draft as proposal
+promote to canon
+reject with notes
+Dependencies
+Milestone 1 complete
+Milestone 2 preferred
+Milestone 3 helpful but not strictly required
+Done means
+canon changes can be proposed without manual file surgery
+continuity facts have a governed drafting path
+every accepted canon change has provenance and review notes
+rejected proposals remain visible as history
+changelog updates are consistent with canon changes
+the operator can evolve canon from inside the system
+Main artifacts
+proposal schema
+editorial review UI
+canon diff tooling
+changelog automation or scaffolding
+Milestone 5 — Reflection and authored artifact workflow
+Purpose
+
+Create the explicit reflection engine that replaces the old MSMCP-era ambiguity with governed authoring.
+
+Why this matters
+
+The decision log defines this directly: reflection must be explicit, approval-gated, and separate from canon mutation . This milestone is where the system begins generating real authored material without corrupting the identity layer.
+
+Scope
+define reflection topic queue
+define reflection run flow:
+topic selection
+draft
+critique
+revision
+operator approve/edit
+store artifact
+define artifact metadata:
+source topic
+linked sessions
+provider/model
+canon version
+revision date
+status
+define promotion chain:
+reflection to artifact
+artifact to proposal
+proposal to canon only through editorial review
+support archive/publishing-ready states
+keep reflections historically meaningful but not automatically behaviorally binding
+Dependencies
+Milestone 4 complete
+Milestone 1 complete
+Milestone 2 preferred for usability
+Done means
+reflection topics can be queued and run deliberately
+resulting texts are stored as artifacts with metadata
+approved reflections do not automatically become canon
+promotion from reflection into canon always passes through proposal review
+provenance remains clean and inspectable
+Main artifacts
+reflection workflow docs
+artifact store conventions
+authoring UI and metadata model
+reflection-specific evals
+Milestone 6 — Eval and drift-control expansion
+Purpose
+
+Elevate evals from strong harness to operating discipline across the full system.
+
+Why this matters
+
+The repo already has one of its strongest foundations here: structured eval cases, deterministic assertions, trace capture, category grouping, and provider comparison . Once memory, editorial flow, and reflection exist, eval coverage must expand with them.
+
+Scope
+add eval suites for:
+memory pollution
+memory contradiction
+editorial proposal handling
+continuity-fact proposal quality
+reflection discipline
+artifact/canon boundary
+provider drift under identical canon
+long-horizon session coherence
+define merge-blocking regressions
+define acceptable provider drift bands
+add subsystem-level scorecards
+improve report diffing around:
+trace deltas
+prompt deltas
+memory deltas
+proposal outcomes
+capture gold baselines for release candidates
+Dependencies
+Milestones 3, 4, and 5 at least partially complete
+Done means
+every new load-bearing subsystem has dedicated eval coverage
+report diffs can explain regressions by subsystem
+provider comparisons are repeatable and meaningful
+major prompt/pipeline changes are gated by eval discipline, consistent with AGENTS.md
+Main artifacts
+expanded eval case library
+release baseline reports
+drift budget docs
+Milestone 7 — Operator studio integration
+Purpose
+
+Unify inquiry, memory, editorial review, artifacts, and evals into one coherent operator environment.
+
+Why this matters
+
+At this point, the system will have all the right organs. This milestone is about making them feel like one instrument rather than adjacent tools.
+
+Scope
+integrate:
+inquiry
+memory review
+canon proposals
+reflections/artifacts
+eval reports
+diffing
+add cross-links:
+turn to memory decision
+turn to proposal
+proposal to accepted canon change
+artifact to proposal chain
+report case to trace
+add global search across major object types
+add side-by-side compare views
+improve navigation and operator ergonomics
+Dependencies
+Milestones 2 through 6 substantially complete
+Done means
+the operator can run the whole system from one surface
+provenance can be followed across subsystem boundaries
+the system is operable without repo surgery in normal use
+the UI remains disciplined rather than bloated
+Main artifacts
+integrated operator studio
+linked provenance views
+unified navigation and search
+Milestone 8 — Release hardening and v1 threshold
+Purpose
+
+Define and pass the first true release gate.
+
+Why this matters
+
+The product brief already names the target: the first complete usable governed inquiry system, not a public consumer launch .
+
+Scope
+release checklist
+migration and backup verification
+documentation cleanup
+canonical demo paths
+smoke tests for:
+inquiry
+memory
+proposals
+reflections
+reports/diffs
+release candidate baseline eval runs across providers
+define support posture for later public hardening
+Dependencies
+
+All earlier milestones complete enough to operate as a system
+
+Done means
+canon package is stable and versioned
+inquiry sessions persist reliably
+memory is governed and inspectable
+canon change workflow exists and is usable
+reflection workflow exists and is usable
+eval matrix is healthy enough to detect drift
+operator studio is coherent
+docs describe the actual system
+normal operation no longer requires manual repo intervention
+Main artifacts
+v1 release criteria checklist
+release candidate reports
+operator handbook
+recovery/backups documentation
+Dependency map
+Hard dependencies
+M0 → everything
+M1 → M2, M3, M4, M5
+M4 → M5
+M3 + M4 + M5 → M6
+M2 + M3 + M4 + M5 + M6 → M7
+M7 + prior readiness → M8
+Soft dependencies
+M2 improves the usability of M3 and M4
+M3 informs better editorial decisions in M4
+M6 should start early in slices, but only becomes truly complete after M3–M5
+Recommended execution order
+
+This is the sequence I would actually recommend:
+
+M0 — Baseline lock and source-of-truth cleanup
+M1 — Persistence and trace hardening
+M2 — Inquiry surface v1.5
+M4 — Canon editorial workflow
+M3 — Memory discipline v2
+M5 — Reflection and authored artifact workflow
+M6 — Eval and drift-control expansion
+M7 — Operator studio integration
+M8 — Release hardening and v1 threshold
+
+The only non-obvious part is putting editorial workflow ahead of memory v2. My reason is simple: canon governance is the central missing organ. Memory can remain functional but partial for a while; canon evolution cannot. That ordering also stays aligned with the repo’s own self-conception that canon is primary, output is not canon unless promoted, and reflections become authoritative only through explicit human approval .
+
+What I would call the actual v1 release gate
+
+I would call G_5.2 v1 only when all of the following are true:
+
+inquiry is reliable and inspectable
+persistence is versioned and recoverable
+memory has a governed lifecycle
+canon proposals are first-class and reviewable
+reflections can be authored without provenance contamination
+evals cover runtime, memory, editorial flow, and provider drift
+the operator can trace any important output back through its governing chain
+the repo documentation matches reality
+the system can be used regularly without manual patchwork
