@@ -8,6 +8,7 @@ export interface RunSuiteInput {
   provider: ModelProvider;
   defaultCanonRoot: string;
   canonFixturesRoot: string;
+  memoryFixturesRoot: string;
   /** Capture full pipeline trace for each case (debug/eval mode). */
   captureTrace?: boolean;
 }
@@ -28,6 +29,7 @@ export async function runSuite({
   provider,
   defaultCanonRoot,
   canonFixturesRoot,
+  memoryFixturesRoot,
   captureTrace = false,
 }: RunSuiteInput): Promise<SuiteRunResult> {
   const results: EvalResult[] = [];
@@ -38,6 +40,7 @@ export async function runSuite({
       provider,
       defaultCanonRoot,
       canonFixturesRoot,
+      memoryFixturesRoot,
       captureTrace,
     });
     results.push(result);

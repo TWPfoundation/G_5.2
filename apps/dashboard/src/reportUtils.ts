@@ -3,6 +3,12 @@ export interface DashboardTrace {
   selectedFacts: Array<{ id: string; statement: string }>;
   selectedGlossaryTerms: Array<{ term: string; definition: string }>;
   selectedRecoveredArtifacts: Array<{ slug: string; title: string }>;
+  selectedMemoryItems: Array<{
+    id: string;
+    type: string;
+    scope: string;
+    statement: string;
+  }>;
   systemPrompt: string;
   userPrompt: string;
   draft: string;
@@ -166,6 +172,19 @@ export function computeDiff(a: JsonReport, b: JsonReport) {
         traceDiff.selectedRecoveredArtifacts = {
           a: aRecoveredArtifacts,
           b: bRecoveredArtifacts,
+        };
+      }
+
+      const aMemoryStatements = joinValues(
+        (ra.trace.selectedMemoryItems ?? []).map((item) => item.statement)
+      );
+      const bMemoryStatements = joinValues(
+        (rb.trace.selectedMemoryItems ?? []).map((item) => item.statement)
+      );
+      if (aMemoryStatements !== bMemoryStatements) {
+        traceDiff.selectedMemoryItems = {
+          a: aMemoryStatements,
+          b: bMemoryStatements,
         };
       }
     }

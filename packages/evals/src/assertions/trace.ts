@@ -118,6 +118,16 @@ export function assertTrace(
       assertions.selectedRecoveredArtifactsMustNotContain ?? [],
       "selectedRecoveredArtifacts"
     ),
+    ...assertItemsContain(
+      trace.selectedMemoryItems.map((item) => item.statement),
+      assertions.selectedMemoryItemsMustContain ?? [],
+      "selectedMemoryItems"
+    ),
+    ...assertItemsExclude(
+      trace.selectedMemoryItems.map((item) => item.statement),
+      assertions.selectedMemoryItemsMustNotContain ?? [],
+      "selectedMemoryItems"
+    ),
     ...assertTextContains(
       trace.userPrompt,
       assertions.userPromptMustContain ?? [],

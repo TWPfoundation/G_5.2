@@ -1,5 +1,5 @@
-version: "0.1.1"
-last_updated: "2026-04-15"
+version: "0.1.2"
+last_updated: "2026-04-16"
 purpose: "Registry of recovered artifacts for G_5.2. Tracks provenance, authority class, and retrieval rules."
 
 artifacts:

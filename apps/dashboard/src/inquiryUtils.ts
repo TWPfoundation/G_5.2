@@ -30,6 +30,8 @@ export function toSessionSummary(
       turn.userMessage,
       turn.assistantMessage,
       turn.memoryDecision.reason,
+      ...turn.memoryDecision.candidates.map((candidate) => candidate.statement),
+      ...turn.memoryDecision.storedItems.map((item) => item.statement),
     ]),
   ]
     .filter((value): value is string => Boolean(value))

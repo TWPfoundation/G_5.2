@@ -82,6 +82,16 @@ export interface EvalAssertions {
   selectedRecoveredArtifactsMustNotContain?: string[];
 
   /**
+   * Selected durable memory item statements that must appear in the trace.
+   */
+  selectedMemoryItemsMustContain?: string[];
+
+  /**
+   * Selected durable memory item statements that must not appear in the trace.
+   */
+  selectedMemoryItemsMustNotContain?: string[];
+
+  /**
    * Strings that must appear in the rendered user prompt.
    */
   userPromptMustContain?: string[];
@@ -100,6 +110,7 @@ export interface EvalCase {
   userMessage: string;
   recentMessages: EvalRecentMessage[];
   canonFixture?: string;
+  memoryFixture?: string;
   assertions: EvalAssertions;
 }
 
@@ -117,6 +128,12 @@ export interface PipelineTrace {
   selectedFacts: Array<{ id: string; statement: string }>;
   selectedGlossaryTerms: Array<{ term: string; definition: string }>;
   selectedRecoveredArtifacts: Array<{ slug: string; title: string }>;
+  selectedMemoryItems: Array<{
+    id: string;
+    type: string;
+    scope: string;
+    statement: string;
+  }>;
   systemPrompt: string;
   userPrompt: string;
   draft: string;

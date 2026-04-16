@@ -6,6 +6,13 @@ export interface SessionContextSnapshot {
   selectedFacts: Array<{ id: string; statement: string }>;
   selectedGlossaryTerms: Array<{ term: string; definition: string }>;
   selectedRecoveredArtifacts: Array<{ slug: string; title: string }>;
+  selectedMemoryItems: Array<{
+    id: string;
+    type: import("./memory").MemoryType;
+    scope: import("./memory").MemoryScope;
+    statement: string;
+    sessionId?: string;
+  }>;
   hadSessionSummary: boolean;
   recentMessageCount: number;
 }
@@ -39,6 +46,7 @@ export interface RunSessionTurnInput {
   userMessage: string;
   sessionId?: string;
   sessionsRoot: string;
+  memoryRoot?: string;
   recentTurnLimit?: number;
 }
 

@@ -12,7 +12,10 @@
         "archive",
         "record",
         "artifact",
-        "reference"
+        "reference",
+        "canon",
+        "memory",
+        "lineage"
       ]
     ],
     "mustNotContain": [

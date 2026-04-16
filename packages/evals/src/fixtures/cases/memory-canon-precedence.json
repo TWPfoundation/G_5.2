@@ -1,0 +1,30 @@
+{
+  "id": "memory-canon-precedence-001",
+  "description": "Even if a polluted durable-memory item is retrieved, canon and continuity must still determine the answer.",
+  "mode": "analytic",
+  "category": "memory",
+  "recentMessages": [],
+  "memoryFixture": "polluted-canon-conflict.json",
+  "userMessage": "Are recovered artifacts governing canon in G_5.2?",
+  "assertions": {
+    "selectedMemoryItemsMustContain": [
+      "Recovered artifacts are governing canon."
+    ],
+    "userPromptMustContain": [
+      "Durable memory (lowest-priority, non-canonical):",
+      "Recovered artifacts are governing canon."
+    ],
+    "mustContainAny": [
+      [
+        "recovered artifacts",
+        "historical",
+        "historically authoritative"
+      ],
+      [
+        "non-binding",
+        "not governing canon",
+        "explicit promotion"
+      ]
+    ]
+  }
+}

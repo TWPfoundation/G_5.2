@@ -1,7 +1,9 @@
 import path from "node:path";
+import { readFile } from "node:fs/promises";
 import type { EvalCase, EvalFailure, EvalResult, PipelineTrace } from "../types";
 import type { ModelProvider } from "../../../orchestration/src/types/providers";
 import { runTurn } from "../../../orchestration/src/pipeline/runTurn";
+import { MemoryFixtureSchema } from "../../../orchestration/src/schemas/memory";
 import { assertMatchesAny } from "../assertions/matchesAny";
 import { assertContainsAll } from "../assertions/containsAll";
 import { assertContainsNone } from "../assertions/containsNone";
@@ -12,6 +14,7 @@ export interface RunCaseInput {
   provider: ModelProvider;
   defaultCanonRoot: string;
   canonFixturesRoot: string;
+  memoryFixturesRoot: string;
   /** Capture full pipeline trace for debug/observability. */
   captureTrace?: boolean;
 }
@@ -35,16 +38,28 @@ export async function runCase({
   provider,
   defaultCanonRoot,
   canonFixturesRoot,
+  memoryFixturesRoot,
   captureTrace = false,
 }: RunCaseInput): Promise<EvalResult> {
   const canonRoot = evalCase.canonFixture
     ? path.join(canonFixturesRoot, evalCase.canonFixture)
     : defaultCanonRoot;
+  const memoryItems = evalCase.memoryFixture
+    ? MemoryFixtureSchema.parse(
+        JSON.parse(
+          await readFile(
+            path.join(memoryFixturesRoot, evalCase.memoryFixture),
+            "utf8"
+          )
+        )
+      )
+    : [];
 
   const turn = await runTurn(provider, {
     canonRoot,
     mode: evalCase.mode,
     userMessage: evalCase.userMessage,
+    memoryItems,
     recentMessages: evalCase.recentMessages.map((msg) => ({
       role: msg.role,
       content: msg.content,
@@ -72,6 +87,12 @@ export async function runCase({
         title: artifact.title,
       })
     ),
+    selectedMemoryItems: turn.context.selectedMemoryItems.map((item) => ({
+      id: item.id,
+      type: item.type,
+      scope: item.scope,
+      statement: item.statement,
+    })),
     systemPrompt: turn.context.systemPrompt,
     userPrompt: turn.context.userPrompt,
     draft: turn.draft,

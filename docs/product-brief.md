@@ -40,6 +40,7 @@ A convincing persona is not a single prompt. It is a system:
 - Responses stay recognizably in voice across sessions
 - Canon drift is rare and caught by the critique pass
 - Chat feels coherent within a session
+- Durable memory remains selective, inspectable, and resistant to pollution
 - New reflections can be generated and approved through a repeatable flow
 - Swapping OpenAI / Anthropic / Gemini providers does not collapse persona identity
 - The system's behavior is auditable at each step
@@ -54,6 +55,7 @@ A convincing persona is not a single prompt. It is a system:
 | Operator dashboard | ✅ Implemented |
 | Session persistence | ✅ Implemented (minimal file-backed layer) |
 | Inquiry surface | ✅ Implemented (minimal operator dashboard inquiry UI) |
+| Durable memory discipline | ✅ Implemented (selective file-backed global/session memory with operator inspection + delete) |
 
 ## Not in v0.1
 
@@ -71,9 +73,10 @@ A convincing persona is not a single prompt. It is a system:
 | 1 — Governance baseline hardening | Active-only retrieval, glossary/recovered-artifact runtime support, report metadata, operator diffing |
 | 2 — Inquiry MVP | Session-connected inquiry flow, simple operator inquiry UI, richer summaries, response review |
 | 2.5 — Operator refinement | Better session browsing, turn inspection, lighter report ergonomics |
-| 3 — Reflection system | Proposal flow, draft + critique + revision, publishing to archive |
-| 4 — Editorial controls | Inspect memory, inspect retrieved context, cross-model comparison |
-| 5 — Public hardening | Auth, rate limits, monitoring, error handling |
+| 3 — Memory Discipline V1 | Selective durable memory writes, retrieval, inspection, delete, and regression coverage |
+| 4 — Reflection system | Proposal flow, draft + critique + revision, publishing to archive |
+| 5 — Editorial controls | Canon proposal review, cross-model comparison, promotion workflow |
+| 6 — Public hardening | Auth, rate limits, monitoring, error handling |
 
 ## Key risks
 
@@ -82,6 +85,6 @@ A convincing persona is not a single prompt. It is a system:
 | Lore sprawl | Canon gatekeeping, evals, explicit continuity facts |
 | Provider drift | Unified canon pack, critique pass, cross-model evals |
 | Memory pollution | Strict memory policy and confidence thresholds |
-| Architecture inflation | Keep v0.1 to draft → critique → revision only |
+| Architecture inflation | Keep durable memory minimal, file-backed, and operator-first until the editorial workflow truly needs more |
 
 

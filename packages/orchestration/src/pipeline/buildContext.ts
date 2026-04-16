@@ -1,6 +1,8 @@
 import { loadCanon } from "../canon/loadCanon";
+import { FileMemoryStore } from "../memory/fileMemoryStore";
 import { buildRetrievalSet } from "../retrieval/buildRetrievalSet";
 import type { Message } from "../types/messages";
+import type { MemoryItem } from "../types/memory";
 import type { BuildContextInput, BuiltContext } from "../types/pipeline";
 import {
   trimToTokenBudget,
@@ -29,11 +31,31 @@ function formatRecentMessage(message: Message): string {
   return `${label}:\n${message.content}`;
 }
 
+async function resolveMemoryItems(input: BuildContextInput): Promise<MemoryItem[]> {
+  if (input.memoryItems) {
+    return input.memoryItems;
+  }
+
+  if (!input.memoryRoot) {
+    return [];
+  }
+
+  const store = new FileMemoryStore(input.memoryRoot);
+  return store.list();
+}
+
 export async function buildContext(
   input: BuildContextInput
 ): Promise<BuiltContext> {
   const canon = await loadCanon(input.canonRoot);
-  const retrieval = buildRetrievalSet(canon, input.userMessage, input.mode);
+  const memoryItems = await resolveMemoryItems(input);
+  const retrieval = buildRetrievalSet(
+    canon,
+    input.userMessage,
+    input.mode,
+    memoryItems,
+    input.sessionId
+  );
 
   const glossaryLines = retrieval.glossaryTerms.map(
     (term) => `- ${term.term}: ${term.definition}`
@@ -42,6 +64,8 @@ export async function buildContext(
   const factLines = retrieval.facts.map(
     (fact) => `- ${fact.id}: ${fact.statement}`
   );
+
+  const memoryLines = retrieval.memoryItems.map((item) => `- ${item.statement}`);
 
   const documentBlocks = trimToTokenBudget(
     retrieval.documents.map((doc) => ({
@@ -114,6 +138,13 @@ export async function buildContext(
     userPromptParts.push("Recent context:", transcript);
   }
 
+  if (memoryLines.length > 0) {
+    userPromptParts.push(
+      "Durable memory (lowest-priority, non-canonical):",
+      ...memoryLines
+    );
+  }
+
   userPromptParts.push("User:", input.userMessage);
   const userPrompt = userPromptParts.join("\n\n");
 
@@ -124,6 +155,7 @@ export async function buildContext(
     ),
     selectedFacts: retrieval.facts,
     selectedGlossaryTerms: retrieval.glossaryTerms,
+    selectedMemoryItems: retrieval.memoryItems,
     selectedRecoveredArtifacts: retrieval.recoveredArtifacts.filter((artifact) =>
       artifactBlocks.some((block) => block.slug === artifact.slug)
     ),

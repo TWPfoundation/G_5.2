@@ -32,6 +32,12 @@ async function main() {
   const canonRoot = path.join(repoRoot, "packages", "canon");
   const casesDir = path.join(packageRoot, "src", "fixtures", "cases");
   const canonFixturesRoot = path.join(packageRoot, "src", "fixtures", "canon");
+  const memoryFixturesRoot = path.join(
+    packageRoot,
+    "src",
+    "fixtures",
+    "memory"
+  );
   const reportsDir = path.join(packageRoot, "reports");
 
   const args = process.argv.slice(2);
@@ -56,6 +62,7 @@ async function main() {
     provider,
     defaultCanonRoot: canonRoot,
     canonFixturesRoot,
+    memoryFixturesRoot,
     captureTrace,
   });
 

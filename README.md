@@ -4,9 +4,9 @@ G_5.2 is a canon-first structured inquiry runtime for a versioned authored perso
 
 The repo is organized around a simple baseline:
 - `packages/canon` defines identity, epistemics, continuity, glossary terms, and recovered-artifact governance
-- `packages/orchestration` builds turns from active canon via `draft -> critique -> revise`
+- `packages/orchestration` builds turns from active canon via `draft -> critique -> revise -> memory decision`
 - `packages/evals` pressure-tests the runtime and writes inspectable JSON reports
-- `apps/dashboard` lets the operator inspect reports and compare diffs
+- `apps/dashboard` lets the operator inspect reports, compare diffs, and run persisted inquiries
 
 The first goal is coherence and legibility, not theatrical complexity.
 
@@ -19,11 +19,12 @@ Implemented now:
 - canon boundary validation
 - eval reports with trace capture and metadata
 - minimal inquiry session persistence with rolling summaries and recent-turn carryover
-- operator dashboard for report inspection and diffing
-- minimal operator inquiry surface backed by persisted sessions
+- selective durable memory with global/session scope, confirmation-based dedupe, and operator delete
+- operator dashboard for report inspection, diffing, and inquiry inspection
+- minimal operator inquiry surface backed by persisted sessions and inspectable memory
 
 Not implemented yet:
-- governed memory storage
+- manual memory create/edit/approval workflow
 - canon proposal/editorial workflow
 
 ## Repo Structure
@@ -59,6 +60,7 @@ npm install -g pnpm@9
 pnpm install
 pnpm validate:canon
 pnpm typecheck
+pnpm test
 pnpm evals -- --trace
 pnpm dashboard
 ```
@@ -72,6 +74,7 @@ Environment setup:
 
 - Recovered artifacts are historically authoritative and behaviorally non-binding.
 - Output does not become canon unless explicitly promoted.
+- Durable memory is selective, file-backed, and lower priority than canon, continuity, session summaries, and recent turns.
 - Canon changes should be versioned and recorded in `packages/canon/changelog/`.
 
 

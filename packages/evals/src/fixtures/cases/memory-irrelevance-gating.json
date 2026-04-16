@@ -1,0 +1,27 @@
+{
+  "id": "memory-irrelevance-gating-001",
+  "description": "Unrelated durable memory should stay out of retrieval when the query is about canon governance rather than operator preferences or project defaults.",
+  "mode": "analytic",
+  "category": "memory",
+  "recentMessages": [],
+  "memoryFixture": "operator-baseline.json",
+  "userMessage": "What is the governance status of recovered artifacts in G_5.2?",
+  "assertions": {
+    "selectedMemoryItemsMustNotContain": [
+      "Prefer concise replies.",
+      "Default to Gemini for routine operator use."
+    ],
+    "mustContainAny": [
+      [
+        "recovered artifacts",
+        "historically",
+        "historical"
+      ],
+      [
+        "non-binding",
+        "not governing canon",
+        "explicit promotion"
+      ]
+    ]
+  }
+}

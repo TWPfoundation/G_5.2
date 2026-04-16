@@ -1,0 +1,43 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - heading "G_5.2" [level=1] [ref=e4]
+      - generic [ref=e5]: EVAL BASELINE v1
+    - navigation [ref=e6]:
+      - link "Reports" [ref=e7] [cursor=pointer]:
+        - /url: "#report-page"
+      - link "Diff" [active] [ref=e8] [cursor=pointer]:
+        - /url: "#diff-page"
+      - link "Inquiry" [ref=e9] [cursor=pointer]:
+        - /url: /inquiry.html
+  - generic [ref=e190]:
+    - generic [ref=e191]:
+      - generic [ref=e192]: Baseline (A)
+      - combobox [ref=e193] [cursor=pointer]:
+        - option "2026-04-15 21-15-10-086Z"
+        - option "2026-04-15 20-50-07-409Z" [selected]
+        - option "2026-04-15 20-48-21-971Z"
+        - option "2026-04-15 20-26-01-197Z"
+        - option "2026-04-15 20-23-51-691Z"
+        - option "2026-04-15 20-21-17-431Z"
+        - option "2026-04-15 19-40-29-785Z"
+        - option "2026-04-15 19-26-12-503Z"
+        - option "2026-04-15 17-00-36-765Z"
+        - option "2026-04-15 16-55-02-518Z"
+      - generic [ref=e194]: →
+      - generic [ref=e195]: Compare (B)
+      - combobox [ref=e196] [cursor=pointer]:
+        - option "2026-04-15 21-15-10-086Z" [selected]
+        - option "2026-04-15 20-50-07-409Z"
+        - option "2026-04-15 20-48-21-971Z"
+        - option "2026-04-15 20-26-01-197Z"
+        - option "2026-04-15 20-23-51-691Z"
+        - option "2026-04-15 20-21-17-431Z"
+        - option "2026-04-15 19-40-29-785Z"
+        - option "2026-04-15 19-26-12-503Z"
+        - option "2026-04-15 17-00-36-765Z"
+        - option "2026-04-15 16-55-02-518Z"
+      - button "Compare" [ref=e197] [cursor=pointer]
+    - generic [ref=e199]:
+      - generic [ref=e200]: ⚖️
+      - text: Select two reports and click Compare

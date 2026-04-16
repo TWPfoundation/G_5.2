@@ -42,4 +42,5 @@ packages/evals/reports/
 
 # Runtime inquiry sessions
 data/inquiry-sessions/
+data/memory-items/
 

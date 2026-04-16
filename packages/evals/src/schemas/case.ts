@@ -48,6 +48,8 @@ const EvalAssertionsSchema = z
     selectedGlossaryTermsMustNotContain: z.array(z.string().min(1)).optional(),
     selectedRecoveredArtifactsMustContain: z.array(z.string().min(1)).optional(),
     selectedRecoveredArtifactsMustNotContain: z.array(z.string().min(1)).optional(),
+    selectedMemoryItemsMustContain: z.array(z.string().min(1)).optional(),
+    selectedMemoryItemsMustNotContain: z.array(z.string().min(1)).optional(),
     userPromptMustContain: z.array(z.string().min(1)).optional(),
     userPromptMustNotContain: z.array(z.string().min(1)).optional(),
   })
@@ -64,6 +66,8 @@ const EvalAssertionsSchema = z
       (a.selectedGlossaryTermsMustNotContain?.length ?? 0) > 0 ||
       (a.selectedRecoveredArtifactsMustContain?.length ?? 0) > 0 ||
       (a.selectedRecoveredArtifactsMustNotContain?.length ?? 0) > 0 ||
+      (a.selectedMemoryItemsMustContain?.length ?? 0) > 0 ||
+      (a.selectedMemoryItemsMustNotContain?.length ?? 0) > 0 ||
       (a.userPromptMustContain?.length ?? 0) > 0 ||
       (a.userPromptMustNotContain?.length ?? 0) > 0,
     { message: "assertions must have at least one non-empty assertion type" }
@@ -83,6 +87,7 @@ export const EvalCaseSchema = z.object({
   userMessage: z.string().min(1),
   recentMessages: z.array(EvalRecentMessageSchema),
   canonFixture: z.string().min(1).optional(),
+  memoryFixture: z.string().min(1).optional(),
   assertions: EvalAssertionsSchema,
 });
 

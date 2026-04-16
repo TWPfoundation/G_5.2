@@ -6,6 +6,20 @@ import {
   toSessionSummary,
 } from "./inquiryUtils";
 import type { InquirySession } from "../../../packages/orchestration/src/types/session";
+import type { MemoryDecision } from "../../../packages/orchestration/src/types/memory";
+
+function buildMemoryDecision(
+  overrides: Partial<MemoryDecision> = {}
+): MemoryDecision {
+  return {
+    shouldStore: false,
+    reason: "No durable memory candidate.",
+    candidates: [],
+    skippedCandidates: [],
+    storedItems: [],
+    ...overrides,
+  };
+}
 
 function buildSession(overrides: Partial<InquirySession>): InquirySession {
   return {
@@ -29,11 +43,7 @@ test("toSessionSummary prefers stored summary over raw turn text", () => {
           mode: "dialogic",
           userMessage: "Tell me about the canon boundary.",
           assistantMessage: "The canon boundary is explicit.",
-          memoryDecision: {
-            shouldStore: false,
-            reason: "No durable memory candidate.",
-            candidates: [],
-          },
+          memoryDecision: buildMemoryDecision(),
         },
       ],
     })
@@ -75,11 +85,33 @@ test("filterSessionSummaries matches summary and turn content", () => {
             mode: "dialogic",
             userMessage: "Why does the glossary matter?",
             assistantMessage: "It keeps project terms stable.",
-            memoryDecision: {
-              shouldStore: false,
-              reason: "No durable memory candidate.",
-              candidates: [],
-            },
+            memoryDecision: buildMemoryDecision({
+              storedItems: [
+                {
+                  action: "created",
+                  id: "memory-1",
+                  type: "project_decision",
+                  scope: "global",
+                  statement: "Keep project terms stable.",
+                  justification: "The assistant captured a durable project decision.",
+                  confidence: "high",
+                  tags: ["glossary"],
+                  createdAt: "2026-04-15T10:05:00.000Z",
+                  updatedAt: "2026-04-15T10:05:00.000Z",
+                  createdFrom: {
+                    sessionId: "session-beta",
+                    turnId: "turn-1",
+                    createdAt: "2026-04-15T10:05:00.000Z",
+                  },
+                  lastConfirmedFrom: {
+                    sessionId: "session-beta",
+                    turnId: "turn-1",
+                    createdAt: "2026-04-15T10:05:00.000Z",
+                  },
+                  confirmationCount: 1,
+                },
+              ],
+            }),
           },
         ],
       })
@@ -88,6 +120,10 @@ test("filterSessionSummaries matches summary and turn content", () => {
 
   assert.deepEqual(
     filterSessionSummaries(sessions, "glossary").map((session) => session.id),
+    ["session-beta"]
+  );
+  assert.deepEqual(
+    filterSessionSummaries(sessions, "stable").map((session) => session.id),
     ["session-beta"]
   );
   assert.deepEqual(

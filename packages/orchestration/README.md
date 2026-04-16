@@ -9,15 +9,15 @@ This package builds G_5.2 turns from canon.
 - retrieve active canon documents and active continuity facts only
 - retrieve glossary terms when the query is definition-oriented
 - retrieve recovered artifacts only when the query explicitly concerns lineage/founding material
+- retrieve durable memory as lowest-priority non-canonical context
 - build a governed system prompt
 - run `draft -> critique -> revise -> memory decision`
-- persist inquiry sessions to disk with recent-turn carryover and rolling summaries
+- persist inquiry sessions to disk with recent-turn carryover, rolling summaries, and durable memory writes
 - return structured turn artifacts for evals and operator tooling
 
 ## Not In Scope Yet
 
-- inquiry UI / live chat surface
-- governed memory storage
+- manual memory editing / approval queue
 - canon proposal workflow
 
 ## Smoke Test
@@ -46,5 +46,5 @@ Provider selection is environment-driven via `providerFromEnv()`, with Gemini as
 buildContext -> draftResponse -> critiqueResponse -> reviseResponse -> decideMemory
 ```
 
-Session persistence now sits one layer above the core turn pipeline through `runSessionTurn()`. Governed long-term memory remains a separate concern.
+Session persistence and durable-memory storage now sit one layer above the core turn pipeline through `runSessionTurn()`. Durable memory remains selective, file-backed, and lower priority than canon, continuity, session summaries, and recent turns.
 

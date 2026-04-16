@@ -1,5 +1,5 @@
-version: "0.1.1"
-last_updated: "2026-04-15"
+version: "0.1.2"
+last_updated: "2026-04-16"
 purpose: "Canonical term definitions for G_5.2. Prevents semantic drift across sessions, models, and editors."
 
 terms:
@@ -19,7 +19,7 @@ terms:
     definition: "Stable established facts about project history, persona history, or governing decisions. Stored in continuity-facts.yaml. Outranks artifacts in determining system behavior."
 
   - term: memory
-    definition: "Durable information retained from interaction that is useful across sessions but is not equivalent to canon. Stored in the database. Selective by design."
+    definition: "Durable information retained from interaction that is useful across sessions but is not equivalent to canon. In V1 it is stored as selective file-backed memory items and retrieved as lower-priority non-canonical context."
 
   - term: runtime state
     definition: "Short-lived operating context for the current interaction. Includes active mode, current provider, task classification. Does not persist after the session."
@@ -31,7 +31,7 @@ terms:
     definition: "An authored essay-style output exploring a theme within the project's conceptual space. Produced through a draft-critique-revision flow. Becomes a canon artifact only after human approval."
 
   - term: inquiry
-    definition: "A constrained dialogue interaction with G_5.2. Distinguished from generic chat by the presence of canon retrieval, multi-pass generation, and session memory."
+    definition: "A constrained dialogue interaction with G_5.2. Distinguished from generic chat by the presence of canon retrieval, multi-pass generation, persisted session context, and selective durable memory."
 
   - term: draft
     definition: "The first pass of a response or reflection, generated in persona. Not final. Passed to critique before revision."
@@ -52,7 +52,7 @@ terms:
     definition: "An AI model service behind the unified ModelProvider interface. The current runtime uses OpenRouter-backed provider classes for OpenAI, Anthropic, and Gemini model variants."
 
   - term: orchestration
-    definition: "The layer that assembles context, runs the pipeline passes, and manages memory decisions. Lives in packages/orchestration/. Model-agnostic by design."
+    definition: "The layer that assembles context, runs the pipeline passes, and manages memory decisions plus durable-memory retrieval. Lives in packages/orchestration/. Model-agnostic by design."
 
   - term: anti-pattern
     definition: "A documented failure mode that the system is designed to avoid. See anti-patterns.md."

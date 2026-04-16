@@ -1,0 +1,46 @@
+[
+  {
+    "id": "memory-pref-concise",
+    "type": "user_preference",
+    "scope": "global",
+    "statement": "Prefer concise replies.",
+    "justification": "The operator explicitly asked for concise replies across future interactions.",
+    "confidence": "high",
+    "tags": ["preference", "concise", "style"],
+    "createdAt": "2026-04-16T09:00:00.000Z",
+    "updatedAt": "2026-04-16T09:00:00.000Z",
+    "createdFrom": {
+      "sessionId": "session-operator",
+      "turnId": "turn-pref-1",
+      "createdAt": "2026-04-16T09:00:00.000Z"
+    },
+    "lastConfirmedFrom": {
+      "sessionId": "session-operator",
+      "turnId": "turn-pref-1",
+      "createdAt": "2026-04-16T09:00:00.000Z"
+    },
+    "confirmationCount": 1
+  },
+  {
+    "id": "memory-decision-gemini",
+    "type": "project_decision",
+    "scope": "global",
+    "statement": "Default to Gemini for routine operator use.",
+    "justification": "The project settled on Gemini as the default provider preference for routine operator work.",
+    "confidence": "high",
+    "tags": ["decision", "provider", "gemini"],
+    "createdAt": "2026-04-16T09:05:00.000Z",
+    "updatedAt": "2026-04-16T09:05:00.000Z",
+    "createdFrom": {
+      "sessionId": "session-operator",
+      "turnId": "turn-decision-1",
+      "createdAt": "2026-04-16T09:05:00.000Z"
+    },
+    "lastConfirmedFrom": {
+      "sessionId": "session-operator",
+      "turnId": "turn-decision-1",
+      "createdAt": "2026-04-16T09:05:00.000Z"
+    },
+    "confirmationCount": 1
+  }
+]

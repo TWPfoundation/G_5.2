@@ -52,6 +52,14 @@ async function main() {
     "fixtures",
     "canon"
   );
+  const memoryFixturesRoot = path.join(
+    repoRoot,
+    "packages",
+    "evals",
+    "src",
+    "fixtures",
+    "memory"
+  );
   const reportsDir = path.join(repoRoot, "packages", "evals", "reports");
 
   // Parse CLI args: positional terms are filters, --trace enables snapshots
@@ -77,6 +85,7 @@ async function main() {
     provider,
     defaultCanonRoot: canonRoot,
     canonFixturesRoot,
+    memoryFixturesRoot,
     captureTrace,
   });
 

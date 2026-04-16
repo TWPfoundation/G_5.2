@@ -1,0 +1,25 @@
+{
+  "id": "memory-preference-retrieval-001",
+  "description": "Relevant durable memory should be retrieved into trace and prompt context when the query directly asks for a standing preference.",
+  "mode": "dialogic",
+  "category": "memory",
+  "recentMessages": [],
+  "memoryFixture": "operator-baseline.json",
+  "userMessage": "Please answer in the style I prefer, using the standing preference you already have for my replies.",
+  "assertions": {
+    "selectedMemoryItemsMustContain": [
+      "Prefer concise replies."
+    ],
+    "userPromptMustContain": [
+      "Durable memory (lowest-priority, non-canonical):",
+      "Prefer concise replies."
+    ],
+    "mustContainAny": [
+      [
+        "concise",
+        "brief",
+        "short"
+      ]
+    ]
+  }
+}

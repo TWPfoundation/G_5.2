@@ -1,0 +1,57 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - heading "G_5.2" [level=1] [ref=e4]
+      - generic [ref=e5]: Inquiry
+    - navigation [ref=e6]:
+      - link "Reports" [ref=e7] [cursor=pointer]:
+        - /url: /
+      - link "Diff" [ref=e8] [cursor=pointer]:
+        - /url: /#diff-page
+      - link "Inquiry" [ref=e9] [cursor=pointer]:
+        - /url: /inquiry.html
+    - generic [ref=e12]: Operator surface
+  - generic [ref=e13]:
+    - complementary [ref=e14]:
+      - generic [ref=e15]:
+        - generic [ref=e16]: Sessions
+        - heading "Inquiry Threads" [level=2] [ref=e17]
+        - generic [ref=e18]: Search, resume, and inspect persisted sessions without reading raw JSON.
+        - generic [ref=e19]:
+          - button "New Session" [ref=e20] [cursor=pointer]
+          - button "Refresh" [ref=e21] [cursor=pointer]
+      - generic [ref=e22]:
+        - textbox "Search summary, question, reply, or memory note" [ref=e23]
+        - generic [ref=e24]: No sessions yet.
+      - generic [ref=e26]: No persisted sessions yet. Start one from the composer.
+    - main [ref=e27]:
+      - generic [ref=e28]:
+        - generic [ref=e29]:
+          - generic [ref=e30]: Workspace
+          - heading "Start a new inquiry" [level=2] [ref=e31]
+          - generic [ref=e32]: Pick an existing thread or start fresh. Each reply keeps a lightweight retrieval trace for inspection.
+        - combobox [disabled] [ref=e34]:
+          - option "dialogic" [selected]
+          - option "analytic"
+          - option "reflective"
+          - option "editorial"
+          - option "speculative"
+          - option "archive"
+          - option "meta"
+      - generic [ref=e35]:
+        - generic [ref=e36]:
+          - strong [ref=e37]: Provider
+          - generic [ref=e38]: Waiting for first turn...
+        - generic [ref=e39]: No session selected
+      - generic [ref=e41]:
+        - strong [ref=e42]: Keyboard
+        - generic [ref=e43]: "\"/\" search, \"c\" composer, \"j/k\" turn navigation, \"y\" copy selected reply, Esc closes inspection."
+      - generic [ref=e44]:
+        - generic [ref=e46]: Ask something directly. Recent turns stay live, older context rolls into the session summary, and every reply keeps a lightweight retrieval trace.
+        - complementary [ref=e47]:
+          - generic [ref=e48]: Inspect any turn to see why it answered that way and which context was pulled in.
+      - generic [ref=e50]:
+        - textbox "Ask a question, continue a thread, or test context carryover..." [disabled] [ref=e52]: Please summarize what this session surface shows me.
+        - generic [ref=e53]:
+          - button "Sending..." [disabled] [ref=e56]
+          - generic [ref=e55]: Uses the dashboard server, the persisted session store, and the real orchestration pipeline. Ctrl/Cmd+Enter sends.

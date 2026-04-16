@@ -13,6 +13,8 @@
  *   GET /api/inquiry/sessions          → list of inquiry sessions
  *   GET /api/inquiry/sessions/:id      → full inquiry session JSON
  *   POST /api/inquiry/turn             → run and persist a new inquiry turn
+ *   GET /api/memory                    → list durable memory items
+ *   DELETE /api/memory/:id             → hard-delete a durable memory item
  *
  * Usage:
  *   pnpm dashboard    (or: pnpm --filter @g52/dashboard dev)
@@ -23,7 +25,9 @@ import fs from "node:fs/promises";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { FileMemoryStore } from "../../../packages/orchestration/src/memory/fileMemoryStore";
 import { MODES, type Mode } from "../../../packages/orchestration/src/types/modes";
+import type { MemoryScope } from "../../../packages/orchestration/src/types/memory";
 import type { BuiltContext } from "../../../packages/orchestration/src/types/pipeline";
 import type { InquirySession } from "../../../packages/orchestration/src/types/session";
 import { providerFromEnv } from "../../../packages/orchestration/src/providers/fromEnv";
@@ -39,6 +43,7 @@ const REPO_ROOT = path.resolve(__dirname, "../../..");
 const REPORTS_DIR = path.join(REPO_ROOT, "packages", "evals", "reports");
 const CANON_ROOT = path.join(REPO_ROOT, "packages", "canon");
 const SESSIONS_DIR = path.join(REPO_ROOT, "data", "inquiry-sessions");
+const MEMORY_DIR = path.join(REPO_ROOT, "data", "memory-items");
 const STATIC_DIR = path.resolve(__dirname, "../public");
 const PORT = parseInt(process.env.DASHBOARD_PORT ?? "4400", 10);
 
@@ -136,6 +141,10 @@ function isMode(value: unknown): value is Mode {
   return typeof value === "string" && MODES.includes(value as Mode);
 }
 
+function isMemoryScope(value: unknown): value is MemoryScope {
+  return value === "global" || value === "session";
+}
+
 function buildContextSnapshot(context: BuiltContext) {
   return {
     selectedDocuments: context.selectedDocuments.map((doc) => ({
@@ -156,6 +165,13 @@ function buildContextSnapshot(context: BuiltContext) {
         title: artifact.title,
       })
     ),
+    selectedMemoryItems: context.selectedMemoryItems.map((item) => ({
+      id: item.id,
+      type: item.type,
+      scope: item.scope,
+      statement: item.statement,
+      ...(item.sessionId ? { sessionId: item.sessionId } : {}),
+    })),
     hadSessionSummary: Boolean(context.sessionSummary),
     recentMessageCount: context.recentMessages.length,
   };
@@ -213,6 +229,12 @@ async function handleRequest(
     return;
   }
 
+  if (url.pathname === "/favicon.ico") {
+    res.writeHead(204);
+    res.end();
+    return;
+  }
+
   if (url.pathname === "/api/diff") {
     const nameA = url.searchParams.get("a");
     const nameB = url.searchParams.get("b");
@@ -242,6 +264,45 @@ async function handleRequest(
   if (url.pathname === "/api/inquiry/sessions") {
     try {
       sendJson(res, 200, await listSessionSummaries());
+    } catch (err) {
+      sendJson(res, 500, {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+    return;
+  }
+
+  if (url.pathname === "/api/memory") {
+    try {
+      const store = new FileMemoryStore(MEMORY_DIR);
+      let items = await store.list();
+      const sessionId = url.searchParams.get("sessionId");
+      const scope = url.searchParams.get("scope");
+
+      if (sessionId) {
+        items = items.filter((item) => item.sessionId === sessionId);
+      }
+
+      if (isMemoryScope(scope)) {
+        items = items.filter((item) => item.scope === scope);
+      }
+
+      sendJson(res, 200, items);
+    } catch (err) {
+      sendJson(res, 500, {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+    return;
+  }
+
+  const memoryDeleteMatch = url.pathname.match(/^\/api\/memory\/([^/]+)$/);
+  if (memoryDeleteMatch && req.method === "DELETE") {
+    try {
+      const deleted = await new FileMemoryStore(MEMORY_DIR).delete(
+        memoryDeleteMatch[1]
+      );
+      sendJson(res, 200, { deleted });
     } catch (err) {
       sendJson(res, 500, {
         error: err instanceof Error ? err.message : String(err),
@@ -288,6 +349,7 @@ async function handleRequest(
         await runSessionTurn(provider, {
         canonRoot: CANON_ROOT,
         sessionsRoot: SESSIONS_DIR,
+        memoryRoot: MEMORY_DIR,
         sessionId: body.sessionId,
         mode,
         userMessage: body.userMessage.trim(),

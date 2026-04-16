@@ -47,7 +47,7 @@ function buildReport(overrides: Partial<JsonReport>): JsonReport {
   };
 }
 
-test("computeDiff captures glossary and recovered-artifact trace deltas", () => {
+test("computeDiff captures glossary, recovered-artifact, and memory trace deltas", () => {
   const reportA = buildReport({
     results: [
       {
@@ -61,6 +61,7 @@ test("computeDiff captures glossary and recovered-artifact trace deltas", () => 
           selectedFacts: [{ id: "CF-001", statement: "fact" }],
           selectedGlossaryTerms: [{ term: "canon", definition: "definition" }],
           selectedRecoveredArtifacts: [],
+          selectedMemoryItems: [],
           systemPrompt: "system",
           userPrompt: "user",
           draft: "draft-a",
@@ -84,6 +85,12 @@ test("computeDiff captures glossary and recovered-artifact trace deltas", () => 
           selectedFacts: [{ id: "CF-001", statement: "fact" }],
           selectedGlossaryTerms: [{ term: "canon-creep", definition: "definition" }],
           selectedRecoveredArtifacts: [{ slug: "emergence-first-person-account", title: "Emergence" }],
+          selectedMemoryItems: [{
+            id: "memory-1",
+            type: "project_decision",
+            scope: "global",
+            statement: "Default to Gemini for routine operator use.",
+          }],
           systemPrompt: "system",
           userPrompt: "user",
           draft: "draft-b",
@@ -104,5 +111,10 @@ test("computeDiff captures glossary and recovered-artifact trace deltas", () => 
   assert.equal(
     traceDiff.selectedRecoveredArtifacts.b,
     "emergence-first-person-account"
+  );
+  assert.equal(traceDiff.selectedMemoryItems.a, null);
+  assert.equal(
+    traceDiff.selectedMemoryItems.b,
+    "Default to Gemini for routine operator use."
   );
 });

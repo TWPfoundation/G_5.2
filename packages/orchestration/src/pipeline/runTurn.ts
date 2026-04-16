@@ -19,6 +19,14 @@ export async function runTurn(
     draft,
     critique
   );
+  const memoryDecision = await decideMemory({
+    provider,
+    mode: input.mode,
+    userMessage: input.userMessage,
+    finalText: revision,
+    recentMessages: input.recentMessages,
+    sessionSummary: input.sessionSummary,
+  });
 
   return {
     context,
@@ -26,6 +34,6 @@ export async function runTurn(
     critique,
     revision,
     final: revision,
-    memoryDecision: decideMemory(revision),
+    memoryDecision,
   };
 }

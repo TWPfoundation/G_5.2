@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
+import path from "node:path";
 import type { Message } from "../types/messages";
+import type { MemoryDecision, MemoryStoredItemSnapshot } from "../types/memory";
 import type { ModelProvider } from "../types/providers";
 import type {
   InquirySession,
@@ -8,6 +10,7 @@ import type {
   SessionTurnArtifacts,
   SessionTurnRecord,
 } from "../types/session";
+import { FileMemoryStore } from "../memory/fileMemoryStore";
 import { runTurn } from "../pipeline/runTurn";
 import { truncateToTokens } from "../utils/budget";
 import { FileSessionStore } from "./fileSessionStore";
@@ -88,8 +91,60 @@ function buildContextSnapshot(
         title: artifact.title,
       })
     ),
+    selectedMemoryItems: turn.selectedMemoryItems.map((item) => ({
+      id: item.id,
+      type: item.type,
+      scope: item.scope,
+      statement: item.statement,
+      ...(item.sessionId ? { sessionId: item.sessionId } : {}),
+    })),
     hadSessionSummary: Boolean(turn.sessionSummary),
     recentMessageCount: turn.recentMessages.length,
+  };
+}
+
+function defaultMemoryRoot(sessionsRoot: string): string {
+  return path.join(path.dirname(sessionsRoot), "memory-items");
+}
+
+function finalizeMemoryDecision(
+  decision: MemoryDecision,
+  storedItems: MemoryStoredItemSnapshot[]
+): MemoryDecision {
+  const skippedCandidates = decision.candidates
+    .filter((candidate) => candidate.confidence !== "high")
+    .map((candidate) => ({
+      ...candidate,
+      rejectionReason:
+        candidate.rejectionReason ??
+        "Only high-confidence candidates are stored in V1.",
+    }));
+
+  if (storedItems.length > 0) {
+    return {
+      ...decision,
+      shouldStore: true,
+      reason: `Stored or confirmed ${storedItems.length} durable memory item${storedItems.length === 1 ? "" : "s"}.`,
+      skippedCandidates,
+      storedItems,
+    };
+  }
+
+  if (decision.candidates.length > 0 && skippedCandidates.length > 0) {
+    return {
+      ...decision,
+      shouldStore: false,
+      reason: "Memory candidates were proposed but none met the V1 storage threshold.",
+      skippedCandidates,
+      storedItems: [],
+    };
+  }
+
+  return {
+    ...decision,
+    shouldStore: false,
+    skippedCandidates,
+    storedItems: [],
   };
 }
 
@@ -99,6 +154,9 @@ export async function runSessionTurn(
 ): Promise<SessionTurnArtifacts> {
   const recentTurnLimit = input.recentTurnLimit ?? DEFAULT_RECENT_TURN_LIMIT;
   const store = new FileSessionStore(input.sessionsRoot);
+  const memoryStore = new FileMemoryStore(
+    input.memoryRoot ?? defaultMemoryRoot(input.sessionsRoot)
+  );
   const existing =
     (input.sessionId ? await store.load(input.sessionId) : null) ??
     createEmptySession(input.sessionId);
@@ -110,15 +168,35 @@ export async function runSessionTurn(
     userMessage: input.userMessage,
     recentMessages: toRecentMessages(recentTurns),
     sessionSummary: existing.summary ?? undefined,
+    sessionId: existing.id,
+    memoryRoot: input.memoryRoot ?? defaultMemoryRoot(input.sessionsRoot),
   });
 
+  const turnId = randomUUID();
+  const createdAt = new Date().toISOString();
+  const memorySource = {
+    sessionId: existing.id,
+    turnId,
+    createdAt,
+  };
+  const storedItems: MemoryStoredItemSnapshot[] = [];
+
+  for (const candidate of turn.memoryDecision.candidates) {
+    if (candidate.confidence !== "high") {
+      continue;
+    }
+
+    storedItems.push(await memoryStore.upsert(candidate, memorySource));
+  }
+
+  const memoryDecision = finalizeMemoryDecision(turn.memoryDecision, storedItems);
   const persistedTurn: SessionTurnRecord = {
-    id: randomUUID(),
-    createdAt: new Date().toISOString(),
+    id: turnId,
+    createdAt,
     mode: input.mode,
     userMessage: input.userMessage,
     assistantMessage: turn.final,
-    memoryDecision: turn.memoryDecision,
+    memoryDecision,
     contextSnapshot: buildContextSnapshot(turn.context),
   };
 
@@ -138,6 +216,7 @@ export async function runSessionTurn(
 
   return {
     ...turn,
+    memoryDecision,
     session,
     persistedTurn,
   };

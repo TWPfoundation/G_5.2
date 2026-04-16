@@ -4,6 +4,7 @@ import type {
   GlossaryTerm,
   LoadedRecoveredArtifact,
 } from "./canon";
+import type { MemoryDecision, MemoryItem } from "./memory";
 import type { Message } from "./messages";
 import type { Mode } from "./modes";
 
@@ -11,6 +12,9 @@ export interface BuildContextInput {
   userMessage: string;
   recentMessages: Message[];
   sessionSummary?: string;
+  sessionId?: string;
+  memoryRoot?: string;
+  memoryItems?: MemoryItem[];
   mode: Mode;
   canonRoot: string;
 }
@@ -21,6 +25,7 @@ export interface BuiltContext {
   selectedFacts: ContinuityFact[];
   selectedGlossaryTerms: GlossaryTerm[];
   selectedRecoveredArtifacts: LoadedRecoveredArtifact[];
+  selectedMemoryItems: MemoryItem[];
   systemPrompt: string;
   recentMessages: Message[];
   sessionSummary?: string;
@@ -33,9 +38,5 @@ export interface TurnArtifacts {
   critique: string;
   revision: string;
   final: string;
-  memoryDecision: {
-    shouldStore: boolean;
-    reason: string;
-    candidates: string[];
-  };
+  memoryDecision: MemoryDecision;
 }
