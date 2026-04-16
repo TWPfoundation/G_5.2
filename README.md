@@ -10,6 +10,18 @@ The repo is organized around a simple baseline:
 
 The first goal is coherence and legibility, not theatrical complexity.
 
+## Authoritative status
+
+For current state and planning, the following documents are authoritative:
+- [`docs/system-map.md`](docs/system-map.md) — official subsystem map (implemented vs planned).
+- [`docs/release-criteria.md`](docs/release-criteria.md) — release ladder and v1 scope.
+- [`docs/invariants.md`](docs/invariants.md) — four core invariants every change must preserve.
+- [`g_52_project_overview_and_roadmap.md`](g_52_project_overview_and_roadmap.md) — milestone roadmap (M0 – M8).
+- [`docs/product-brief.md`](docs/product-brief.md) — product framing.
+- [`docs/LINEAGE_AND_BOUNDARIES.md`](docs/LINEAGE_AND_BOUNDARIES.md) — repository boundary rules.
+
+If anything in this README appears to contradict the documents above, the documents above win.
+
 ## Current Scope
 
 Implemented now:
@@ -24,8 +36,16 @@ Implemented now:
 - minimal operator inquiry surface backed by persisted sessions, stored context snapshots, and inspectable memory
 
 Not implemented yet:
-- manual memory create/edit/approval workflow
-- canon proposal/editorial workflow
+- persistence & trace hardening for long-lived sessions (M1)
+- inquiry surface v1.5 (M2)
+- memory discipline v2 — triage, open-thread resolution, anti-pollution coverage (M3)
+- canon / continuity-fact editorial workflow (M4)
+- reflection & authored-artifact workflow (M5)
+- eval & drift-control expansion (M6)
+- operator studio integration (M7)
+- release hardening & v1 threshold (M8)
+
+See [`docs/system-map.md`](docs/system-map.md) for the full subsystem breakdown and [`docs/release-criteria.md`](docs/release-criteria.md) for the release ladder.
 
 ## Repo Structure
 
@@ -76,9 +96,13 @@ Operator surfaces:
 
 ## Notes
 
-- Recovered artifacts are historically authoritative and behaviorally non-binding.
-- Output does not become canon unless explicitly promoted.
-- Durable memory is selective, file-backed, and lower priority than canon, continuity, session summaries, and recent turns.
-- Canon changes should be versioned and recorded in `packages/canon/changelog/`.
+The four core invariants every change must preserve are captured in [`docs/invariants.md`](docs/invariants.md):
+
+1. **Canon is the source of truth.**
+2. **Output is not canon unless explicitly promoted** — recovered artifacts are historically authoritative and behaviorally non-binding.
+3. **Memory is selective** — file-backed, inspectable, deletable, and ranked below canon, continuity, session summaries, and recent turns.
+4. **Provider portability is preserved** — provider-specific logic stays behind the shared interface in `packages/orchestration/src/providers/`.
+
+Canon changes should be versioned and recorded in `packages/canon/changelog/`, and pass through the editorial workflow once it lands in M4.
 
 

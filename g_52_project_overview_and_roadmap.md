@@ -1,5 +1,17 @@
 # G_5.2 — Project Overview, Current State, and Roadmap
 
+## Authoritative references
+
+This roadmap is one of several project-wide documents. The following are authoritative and this file must not contradict them:
+
+- [`docs/system-map.md`](docs/system-map.md) — official subsystem map (implemented vs planned).
+- [`docs/release-criteria.md`](docs/release-criteria.md) — release ladder and v1 scope.
+- [`docs/invariants.md`](docs/invariants.md) — four core invariants every milestone must preserve.
+- [`README.md`](README.md) — bootstrap and current scope.
+- [`docs/product-brief.md`](docs/product-brief.md) — product framing.
+
+The milestone ladder below (M0 – M8) is the execution plan; the rung terminology (operator-grade → editorial-grade → reflection-grade → v1) is defined in `docs/release-criteria.md`.
+
 ## 1. What G_5.2 is
 
 G_5.2 is a canon-first engineered runtime for a versioned authored persona.
@@ -310,149 +322,42 @@ That distinction should remain intact until the inquiry runtime is ready.
 
 ---
 
-## 8. Recommended roadmap to first real V1
+## 8. Milestone roadmap to v1
 
-This roadmap aims at the first actual usable V1, not the abstract final form.
+This roadmap is expressed as milestones M0 – M8. Each milestone advances one or more rungs of the release ladder defined in [`docs/release-criteria.md`](docs/release-criteria.md).
 
-## Phase 1 — Freeze the governance baseline
-**Status:** Complete
+Completed foundation work (pre-M0) is captured in sections 4 and 7 above: baseline governance lock, inquiry persistence, minimal inquiry surface, and memory discipline v1 are all implemented.
 
-Goal:
-Treat the current runtime + eval suite + dashboard as the baseline to protect.
+### M0 — Baseline lock & source-of-truth cleanup
+**Status:** In progress
 
-Tasks:
-- freeze Eval Baseline v1
-- freeze Operator Baseline v1
-- ensure reports include commit/canon/prompt metadata
-- document reference-provider expectations
-- avoid further generic prompt tuning unless a real failure appears
+Converge documentation onto a single authoritative definition of the system. Define the subsystem map, release ladder, v1 scope, and core invariants. No code changes to canon, orchestration, evals, or dashboard subsystems.
 
-Deliverable:
-A stable governed runtime baseline with reproducible evaluation and inspection.
+Deliverable: `docs/system-map.md`, `docs/release-criteria.md`, `docs/invariants.md`, and aligned README + roadmap.
 
-## Phase 2 — Add thin inquiry persistence
-**Status:** Complete
+### M1 — Persistence & trace hardening
+Strengthen the persistence and trace layer so long-lived inquiry sessions and long trace histories remain reliable and inspectable. Prerequisite for the editorial-grade rung.
 
-Goal:
-Make G_5.2 usable for actual inquiry sessions rather than only eval execution.
+### M2 — Inquiry surface v1.5
+Extend the operator inquiry UI to support the workflows M3 – M5 will need: richer turn navigation, clearer context disclosure, better session management.
 
-Tasks:
-- define session schema
-- define message schema
-- define session summary schema
-- define memory item schema
-- persist real inquiry turns
-- store draft/critique/revision optionally for operator mode
-- preserve final output and summary always
+### M3 — Memory discipline v2
+Add triage for proposed-but-skipped memory, explicit handling of resolved `open_thread` items, stronger anti-pollution coverage under longer-lived real sessions, and eval cases that protect the new behavior.
 
-Deliverable:
-A minimal persistence layer for real usage.
+### M4 — Canon editorial workflow
+Turn governed canon change into a first-class workflow: proposals, continuity-fact drafting, approval / rejection notes, explicit promotion tooling, and operator prompts that distinguish "draft as proposal" from "promote to canon".
 
-## Phase 3 — Build the thinnest viable inquiry interface
-**Status:** Complete
+### M5 — Reflection & authored artifact workflow
+A disciplined reflection loop: draft → critique → revise authoring path, artifact storage with metadata, and an explicit promotion path from reflection artifact into canon only when the operator approves.
 
-Goal:
-Create a minimal product surface for actual use.
+### M6 — Eval & drift-control expansion
+Expand eval coverage to protect editorial, reflection, and memory-v2 behavior; formalize provider comparison runs as first-class artifacts; keep drift measurable rather than papered over with per-provider tuning.
 
-Tasks:
-- session list
-- inquiry panel
-- response view
-- optional operator trace toggle
-- summary view
-- memory view (read-only at first)
+### M7 — Operator studio integration
+Unify the inquiry, editorial, reflection, memory, and eval surfaces into one coherent operator studio experience.
 
-Important rule:
-This should remain lean.
-Do not build a theatrical front-end before the operator model is battle-tested.
-
-Deliverable:
-An operator-grade inquiry UI that supports real sessions.
-
-## Phase 4 — Memory discipline v1
-**Status:** Complete
-
-Goal:
-Move memory from placeholder logic to governed memory.
-
-Tasks:
-- classify durable vs ephemeral information
-- separate user preferences from project decisions from canon suggestions
-- require justification for memory promotion
-- expose memory to operator inspection and deletion
-- test memory drift explicitly in evals
-
-Deliverable:
-A usable, inspectable, non-swampy memory layer.
-
-## Phase 5 — Canon and continuity editorial workflow
-Goal:
-Turn governed change into a first-class workflow rather than a manual repo ritual.
-
-Tasks:
-- proposal objects or files
-- continuity fact proposal flow
-- canon revision proposal flow
-- approval/rejection notes
-- explicit promotion tooling
-- operator prompts for “draft this as proposal” vs “promote this to canon”
-
-Deliverable:
-A real canon evolution workflow consistent with the project’s own governance theory.
-
-## Phase 6 — Reflection and authoring workflow
-Goal:
-Make reflection generation a deliberate authored loop.
-
-Tasks:
-- reflection prompt flow
-- draft + critique + revision authoring path
-- artifact storage with metadata
-- proposal path from reflection into canon only when explicitly promoted
-- archive publishing path
-
-Deliverable:
-A disciplined reflection engine that can generate new artifacts without corrupting active canon.
-
-## Phase 7 — Multi-provider operational maturity
-Goal:
-Make provider variation a managed reality rather than an occasional experiment.
-
-Tasks:
-- save provider comparison runs as first-class artifacts
-- dashboard provider comparison presets
-- identify provider-specific compensation rules only if they are justified by repeated drift
-- avoid overfitting one provider’s quirks into the universal runtime
-
-Deliverable:
-A stable cross-provider operating model.
-
-## Phase 8 — V1 release threshold
-Goal:
-Define the first actual V1 boundary.
-
-### Suggested V1 criteria
-G_5.2 V1 should mean:
-- canon package is stable and versioned
-- inquiry sessions persist reliably
-- operator can inspect full turn traces when needed
-- memory promotion is governed and inspectable
-- canon change workflow exists
-- reflection workflow exists
-- multi-provider eval matrix is healthy enough to compare drift
-- dashboard supports report diffing and live inquiry inspection
-- the system can be used regularly without repo surgery
-
-### V1 is not required to mean
-- public launch
-- autonomous behavior
-- broad tool use
-- large multi-user architecture
-- polished consumer UI
-- final theory of memory or selfhood
-
-Deliverable:
-The first complete usable governed inquiry system.
+### M8 — Release hardening & v1 threshold
+Stabilize configuration, reproducibility, and upgrade paths so the system can be used regularly without repo surgery. Cross the v1 threshold as defined in `docs/release-criteria.md`.
 
 ---
 
@@ -477,16 +382,15 @@ But that should remain secondary to the actual nearer milestone:
 
 ## 10. Recommended immediate next moves
 
-If the goal is the first real V1, the next sequence should be:
+The shortest path from the current strong foundation to a first usable v1 is the milestone ladder in section 8:
 
-1. fix the OpenRouter credit ceiling or lower requested max token headroom for full Gemini eval runs
-2. begin canon proposal workflow
-3. design the first continuity-fact proposal path
-4. define the reflection/authoring flow
-5. decide whether memory needs approval workflow beyond inspect/delete
-6. keep the inquiry/dashboard surface lean while real usage reveals gaps
+1. **M0** — lock the baseline and converge documentation (this milestone).
+2. **M1** — harden persistence and traces so later workflows can rely on them.
+3. **M2 – M4** — extend the operator surface, harden memory, and land the canon editorial workflow (editorial-grade rung).
+4. **M5 – M6** — add the reflection / authored-artifact workflow and expand eval + drift control (reflection-grade rung).
+5. **M7 – M8** — integrate the operator studio and cross the v1 release threshold.
 
-That is the shortest path from strong foundation to first usable system.
+Milestones M1 – M8 each have their own task record; this roadmap is the shared map, not the per-milestone specification.
 
 ---
 

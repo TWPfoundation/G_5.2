@@ -68,16 +68,9 @@ A convincing persona is not a single prompt. It is a system:
 
 ## Development phases
 
-| Phase | Scope |
-|-------|-------|
-| 0 — Foundation | Canon package, provider abstraction, canon validation, orchestration baseline, eval harness |
-| 1 — Governance baseline hardening | Active-only retrieval, glossary/recovered-artifact runtime support, report metadata, operator diffing |
-| 2 — Inquiry MVP | Session-connected inquiry flow, simple operator inquiry UI, richer summaries, response review |
-| 2.5 — Operator refinement | Better session browsing, turn inspection, lighter report ergonomics |
-| 3 — Memory Discipline V1 | Selective durable memory writes, retrieval, inspection, delete, and regression coverage |
-| 4 — Editorial workflow | Canon proposal review, continuity drafting, promotion workflow |
-| 5 — Reflection system | Draft + critique + revision authoring flow, artifact storage, publishing path |
-| 6 — Public hardening | Auth, rate limits, monitoring, error handling |
+The execution ladder is tracked as milestones M0 – M8 in [`../g_52_project_overview_and_roadmap.md`](../g_52_project_overview_and_roadmap.md). The release-rung vocabulary (operator-grade → editorial-grade → reflection-grade → v1) is defined in [`release-criteria.md`](release-criteria.md). Foundation phases (canon, orchestration, eval harness, inquiry persistence, minimal inquiry surface, memory discipline v1) are implemented; remaining milestones cover persistence hardening, inquiry surface v1.5, memory discipline v2, editorial workflow, reflection workflow, eval / drift expansion, operator studio integration, and release hardening.
+
+Public hardening (auth, rate limits, monitoring) is explicitly post-v1; see [`release-criteria.md`](release-criteria.md).
 
 ## Key risks
 
