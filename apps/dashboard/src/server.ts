@@ -32,6 +32,8 @@ import type { BuiltContext } from "../../../packages/orchestration/src/types/pip
 import type { InquirySession } from "../../../packages/orchestration/src/types/session";
 import { providerFromEnv } from "../../../packages/orchestration/src/providers/fromEnv";
 import { runSessionTurn } from "../../../packages/orchestration/src/sessions/runSessionTurn";
+import { FileSessionStore } from "../../../packages/orchestration/src/sessions/fileSessionStore";
+import { validateReport } from "../../../packages/evals/src/reporters/reportSchema";
 import { computeDiff, type JsonReport } from "./reportUtils";
 import {
   sortSessionSummaries,
@@ -101,33 +103,25 @@ async function readJsonBody(req: http.IncomingMessage): Promise<unknown> {
   return raw ? JSON.parse(raw) : {};
 }
 
-async function readSession(sessionId: string): Promise<InquirySession | null> {
-  try {
-    const raw = await fs.readFile(path.join(SESSIONS_DIR, `${sessionId}.json`), "utf8");
-    return JSON.parse(raw) as InquirySession;
-  } catch (error) {
-    const code = (error as NodeJS.ErrnoException).code;
-    if (code === "ENOENT") {
-      return null;
-    }
+const sessionStore = new FileSessionStore(SESSIONS_DIR);
 
-    throw error;
-  }
+async function readSession(sessionId: string): Promise<InquirySession | null> {
+  // Route through FileSessionStore so legacy data is migrated and
+  // newer-than-supported data is rejected consistently.
+  return sessionStore.load(sessionId);
 }
 
 async function listSessionSummaries() {
   try {
     const files = await fs.readdir(SESSIONS_DIR);
-    const sessions = await Promise.all(
-      files
-        .filter((file) => file.endsWith(".json"))
-        .map(async (file) => {
-          const raw = await fs.readFile(path.join(SESSIONS_DIR, file), "utf8");
-          return JSON.parse(raw) as InquirySession;
-        })
+    const ids = files
+      .filter((file) => file.endsWith(".json"))
+      .map((file) => file.slice(0, -".json".length));
+    const sessions = await Promise.all(ids.map((id) => sessionStore.load(id)));
+    const loaded = sessions.filter(
+      (session): session is InquirySession => session !== null
     );
-
-    return sortSessionSummaries(sessions.map(toSessionSummary));
+    return sortSessionSummaries(loaded.map(toSessionSummary));
   } catch (error) {
     const code = (error as NodeJS.ErrnoException).code;
     if (code === "ENOENT") {
@@ -248,8 +242,8 @@ async function handleRequest(
         fs.readFile(path.join(REPORTS_DIR, nameA), "utf8"),
         fs.readFile(path.join(REPORTS_DIR, nameB), "utf8"),
       ]);
-      const reportA: JsonReport = JSON.parse(rawA);
-      const reportB: JsonReport = JSON.parse(rawB);
+      const reportA = validateReport(JSON.parse(rawA)) as JsonReport;
+      const reportB = validateReport(JSON.parse(rawB)) as JsonReport;
       const diff = computeDiff(reportA, reportB);
       diff.a.name = nameA;
       diff.b.name = nameB;
@@ -379,10 +373,17 @@ async function handleRequest(
     const reportPath = path.join(REPORTS_DIR, reportMatch[1]);
     try {
       const data = await fs.readFile(reportPath, "utf8");
-      res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(data);
-    } catch {
-      sendJson(res, 404, { error: "Report not found" });
+      const validated = validateReport(JSON.parse(data));
+      sendJson(res, 200, validated);
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code === "ENOENT") {
+        sendJson(res, 404, { error: "Report not found" });
+      } else {
+        sendJson(res, 500, {
+          error: err instanceof Error ? err.message : "Report invalid",
+        });
+      }
     }
     return;
   }

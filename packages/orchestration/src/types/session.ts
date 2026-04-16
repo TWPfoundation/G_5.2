@@ -1,3 +1,5 @@
+import type { PersistedSessionSummary } from "../persistence/sessionSchema";
+import type { RunMetadata } from "../persistence/runMetadata";
 import type { Mode } from "./modes";
 import type { TurnArtifacts } from "./pipeline";
 
@@ -17,7 +19,16 @@ export interface SessionContextSnapshot {
   recentMessageCount: number;
 }
 
+export interface SessionTurnTrace {
+  schemaVersion?: number;
+  draft: string;
+  critique: string;
+  revision: string;
+  final: string;
+}
+
 export interface SessionTurnRecord {
+  schemaVersion?: number;
   id: string;
   createdAt: string;
   mode: Mode;
@@ -25,13 +36,17 @@ export interface SessionTurnRecord {
   assistantMessage: string;
   memoryDecision: TurnArtifacts["memoryDecision"];
   contextSnapshot?: SessionContextSnapshot;
+  contextSnapshotId?: string;
+  runMetadata?: RunMetadata;
+  trace?: SessionTurnTrace;
 }
 
 export interface InquirySession {
+  schemaVersion?: number;
   id: string;
   createdAt: string;
   updatedAt: string;
-  summary: string | null;
+  summary: PersistedSessionSummary | null;
   turns: SessionTurnRecord[];
 }
 

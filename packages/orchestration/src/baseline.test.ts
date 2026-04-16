@@ -270,7 +270,7 @@ test("runSessionTurn persists turns and rolls older context into summary", async
   assert.equal(second.session.turns.length, 2);
   assert.equal(third.session.turns.length, 3);
   assert.ok(third.session.summary);
-  assert.match(third.session.summary ?? "", /First question about critique\./);
+  assert.match(third.session.summary?.text ?? "", /First question about critique\./);
   assert.ok(third.persistedTurn.contextSnapshot);
   assert.ok(third.persistedTurn.contextSnapshot?.recentMessageCount > 0);
   assert.ok(third.persistedTurn.contextSnapshot?.selectedDocuments.length);

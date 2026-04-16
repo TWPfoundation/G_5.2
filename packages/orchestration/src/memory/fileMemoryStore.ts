@@ -3,12 +3,13 @@ import { existsSync } from "node:fs";
 import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
-  MemoryFixtureSchema,
   type MemoryCandidate,
   type MemoryItem,
   type MemorySourceRef,
   type MemoryStoredItemSnapshot,
 } from "../schemas/memory";
+import { migrateMemoryItem } from "../persistence/migrations";
+import { SCHEMA_VERSIONS } from "../persistence/schemaVersions";
 import type { MemoryStore } from "../types/memory";
 
 function memoryPath(rootDir: string, memoryId: string): string {
@@ -58,7 +59,11 @@ function dedupeKey(
 async function parseMemoryFile(filePath: string): Promise<MemoryItem> {
   const raw = await readFile(filePath, "utf8");
   const parsed = JSON.parse(raw) as unknown;
-  return MemoryFixtureSchema.element.parse(parsed);
+  return migrateMemoryItem(parsed);
+}
+
+function withSchemaVersion(item: MemoryItem): MemoryItem {
+  return { schemaVersion: SCHEMA_VERSIONS.memoryItem, ...item };
 }
 
 export class FileMemoryStore implements MemoryStore {
@@ -118,13 +123,13 @@ export class FileMemoryStore implements MemoryStore {
     );
 
     if (existing) {
-      const updated: MemoryItem = {
+      const updated: MemoryItem = withSchemaVersion({
         ...existing,
         updatedAt: source.createdAt,
         lastConfirmedFrom: source,
         confirmationCount: existing.confirmationCount + 1,
         tags: normalizeTags([...existing.tags, ...normalizedCandidate.tags]),
-      };
+      });
 
       await writeFile(
         memoryPath(this.rootDir, updated.id),
@@ -138,7 +143,7 @@ export class FileMemoryStore implements MemoryStore {
       };
     }
 
-    const created: MemoryItem = {
+    const created: MemoryItem = withSchemaVersion({
       id: randomUUID(),
       type: normalizedCandidate.type,
       scope: normalizedCandidate.scope,
@@ -154,7 +159,7 @@ export class FileMemoryStore implements MemoryStore {
       createdFrom: source,
       lastConfirmedFrom: source,
       confirmationCount: 1,
-    };
+    });
 
     await writeFile(
       memoryPath(this.rootDir, created.id),

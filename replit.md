@@ -53,9 +53,25 @@ The dashboard runs on port **5000** (bound to `0.0.0.0` for Replit preview).
 
 ## Data Directories
 
-- `data/inquiry-sessions/` — Persisted session JSON files
-- `data/memory-items/` — Durable memory store
-- `packages/evals/reports/` — Evaluation report outputs
+- `data/inquiry-sessions/` — Persisted session JSON files (versioned via `schemaVersion`)
+- `data/memory-items/` — Durable memory store (versioned via `schemaVersion`)
+- `data/context-snapshots/` — First-class per-turn context snapshots (replay-ready)
+- `packages/evals/reports/` — Evaluation report outputs (versioned via `schemaVersion`)
+
+## Persistence layer (M1)
+
+- Every persisted object (session, turn, memory item, context snapshot, report)
+  carries an explicit `schemaVersion`. Older unversioned data is upgraded on load
+  by `packages/orchestration/src/persistence/migrations.ts`; unknown / newer
+  shapes are refused with a `SchemaMigrationError`.
+- Each turn references its context snapshot by `contextSnapshotId` and records
+  normalized `runMetadata` (provider, model, canon version, prompt revision,
+  pipeline revision, commit SHA, captured-at timestamp).
+- `replayTurn` in `persistence/replay.ts` re-runs a persisted turn with the
+  exact inputs captured in its snapshot.
+- `exportSessionBundle` / `importSessionBundle` in `persistence/archive.ts`
+  serialize a session and all of its snapshots into a single bundle for
+  archive and round-trip import.
 
 ## Environment Variables
 

@@ -27,6 +27,7 @@ export const MemoryCandidateSchema = z.object({
 });
 
 export const MemoryItemSchema = z.object({
+  schemaVersion: z.literal(2).optional(),
   id: z.string().min(1),
   type: MemoryTypeSchema,
   scope: MemoryScopeSchema,

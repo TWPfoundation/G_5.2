@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import path from "node:path";
+import { loadCanon } from "../canon/loadCanon";
 import type { Message } from "../types/messages";
 import type { MemoryDecision, MemoryStoredItemSnapshot } from "../types/memory";
 import type { ModelProvider } from "../types/providers";
@@ -12,7 +13,17 @@ import type {
 } from "../types/session";
 import { FileMemoryStore } from "../memory/fileMemoryStore";
 import { runTurn } from "../pipeline/runTurn";
+import { PIPELINE_REVISION, PROMPT_REVISION } from "../pipeline/revision";
 import { truncateToTokens } from "../utils/budget";
+import {
+  defaultContextSnapshotRoot,
+  FileContextSnapshotStore,
+} from "../persistence/fileContextSnapshotStore";
+import type { PersistedContextSnapshot } from "../persistence/contextSnapshotSchema";
+import type { RunMetadata } from "../persistence/runMetadata";
+import { SCHEMA_VERSIONS } from "../persistence/schemaVersions";
+import type { PersistedSessionSummary } from "../persistence/sessionSchema";
+import { getGitCommit } from "../persistence/gitContext";
 import { FileSessionStore } from "./fileSessionStore";
 
 const DEFAULT_RECENT_TURN_LIMIT = 4;
@@ -23,6 +34,7 @@ function createEmptySession(sessionId?: string): InquirySession {
   const now = new Date().toISOString();
 
   return {
+    schemaVersion: SCHEMA_VERSIONS.session,
     id: sessionId ?? randomUUID(),
     createdAt: now,
     updatedAt: now,
@@ -48,7 +60,10 @@ function toRecentMessages(turns: SessionTurnRecord[]): Message[] {
   ]);
 }
 
-function summarizeTurns(turns: SessionTurnRecord[]): string | null {
+function summarizeTurns(
+  turns: SessionTurnRecord[],
+  generatedAt: string
+): PersistedSessionSummary | null {
   if (turns.length === 0) {
     return null;
   }
@@ -66,7 +81,11 @@ function summarizeTurns(turns: SessionTurnRecord[]): string | null {
     })
     .join("\n");
 
-  return truncateToTokens(summary, MAX_SUMMARY_TOKENS);
+  return {
+    schemaVersion: SCHEMA_VERSIONS.sessionSummary,
+    text: truncateToTokens(summary, MAX_SUMMARY_TOKENS),
+    generatedAt,
+  };
 }
 
 function buildContextSnapshot(
@@ -154,8 +173,10 @@ export async function runSessionTurn(
 ): Promise<SessionTurnArtifacts> {
   const recentTurnLimit = input.recentTurnLimit ?? DEFAULT_RECENT_TURN_LIMIT;
   const store = new FileSessionStore(input.sessionsRoot);
-  const memoryStore = new FileMemoryStore(
-    input.memoryRoot ?? defaultMemoryRoot(input.sessionsRoot)
+  const memoryRoot = input.memoryRoot ?? defaultMemoryRoot(input.sessionsRoot);
+  const memoryStore = new FileMemoryStore(memoryRoot);
+  const snapshotStore = new FileContextSnapshotStore(
+    defaultContextSnapshotRoot(input.sessionsRoot)
   );
   const existing =
     (input.sessionId ? await store.load(input.sessionId) : null) ??
@@ -167,9 +188,9 @@ export async function runSessionTurn(
     mode: input.mode,
     userMessage: input.userMessage,
     recentMessages: toRecentMessages(recentTurns),
-    sessionSummary: existing.summary ?? undefined,
+    sessionSummary: existing.summary?.text ?? undefined,
     sessionId: existing.id,
-    memoryRoot: input.memoryRoot ?? defaultMemoryRoot(input.sessionsRoot),
+    memoryRoot,
   });
 
   const turnId = randomUUID();
@@ -190,14 +211,67 @@ export async function runSessionTurn(
   }
 
   const memoryDecision = finalizeMemoryDecision(turn.memoryDecision, storedItems);
+  const inlineSnapshot = buildContextSnapshot(turn.context);
+
+  // Persist the full replay-ready snapshot as a first-class object.
+  const canon = await loadCanon(input.canonRoot);
+  const snapshotId = randomUUID();
+  const persistedSnapshot: PersistedContextSnapshot = {
+    schemaVersion: SCHEMA_VERSIONS.contextSnapshot,
+    id: snapshotId,
+    createdAt,
+    mode: input.mode,
+    canonVersion: String(canon.manifest.version),
+    userMessage: input.userMessage,
+    recentMessages: turn.context.recentMessages.map((m) => ({
+      role: m.role,
+      content: m.content,
+      ...(m.passType ? { passType: m.passType } : {}),
+      ...(m.createdAt ? { createdAt: m.createdAt } : {}),
+    })),
+    sessionSummary: turn.context.sessionSummary ?? null,
+    memoryItems: turn.context.selectedMemoryItems,
+    selectedDocuments: inlineSnapshot.selectedDocuments,
+    selectedFacts: inlineSnapshot.selectedFacts,
+    selectedGlossaryTerms: inlineSnapshot.selectedGlossaryTerms,
+    selectedRecoveredArtifacts: inlineSnapshot.selectedRecoveredArtifacts,
+    selectedMemoryItems: inlineSnapshot.selectedMemoryItems,
+    hadSessionSummary: inlineSnapshot.hadSessionSummary,
+    recentMessageCount: inlineSnapshot.recentMessageCount,
+    systemPrompt: turn.context.systemPrompt,
+    userPrompt: turn.context.userPrompt,
+  };
+  await snapshotStore.save(persistedSnapshot);
+
+  const runMetadata: RunMetadata = {
+    provider: provider.name,
+    model: (provider as { model?: string }).model ?? "unknown",
+    canonVersion: String(canon.manifest.version),
+    canonLastUpdated: canon.manifest.last_updated ?? null,
+    promptRevision: PROMPT_REVISION,
+    pipelineRevision: PIPELINE_REVISION,
+    commitSha: await getGitCommit(process.cwd()),
+    capturedAt: createdAt,
+  };
+
   const persistedTurn: SessionTurnRecord = {
+    schemaVersion: SCHEMA_VERSIONS.sessionTurn,
     id: turnId,
     createdAt,
     mode: input.mode,
     userMessage: input.userMessage,
     assistantMessage: turn.final,
     memoryDecision,
-    contextSnapshot: buildContextSnapshot(turn.context),
+    contextSnapshot: inlineSnapshot,
+    contextSnapshotId: snapshotId,
+    runMetadata,
+    trace: {
+      schemaVersion: SCHEMA_VERSIONS.turnTrace,
+      draft: turn.draft,
+      critique: turn.critique,
+      revision: turn.revision,
+      final: turn.final,
+    },
   };
 
   const turns = [...existing.turns, persistedTurn];
@@ -207,8 +281,9 @@ export async function runSessionTurn(
   );
   const session: InquirySession = {
     ...existing,
+    schemaVersion: SCHEMA_VERSIONS.session,
     updatedAt: persistedTurn.createdAt,
-    summary: summarizeTurns(rolledIntoSummary),
+    summary: summarizeTurns(rolledIntoSummary, persistedTurn.createdAt),
     turns,
   };
 

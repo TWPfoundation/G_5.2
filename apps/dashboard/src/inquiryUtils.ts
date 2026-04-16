@@ -23,9 +23,10 @@ export function toSessionSummary(
   session: InquirySession
 ): InquirySessionSummary {
   const lastTurn = session.turns.at(-1);
+  const summaryText = session.summary?.text ?? null;
   const searchableText = [
     session.id,
-    session.summary,
+    summaryText,
     ...session.turns.flatMap((turn) => [
       turn.userMessage,
       turn.assistantMessage,
@@ -44,7 +45,7 @@ export function toSessionSummary(
     updatedAt: session.updatedAt,
     turnCount: session.turns.length,
     preview: firstNonEmpty(
-      session.summary,
+      summaryText,
       lastTurn?.userMessage,
       lastTurn?.assistantMessage
     ),

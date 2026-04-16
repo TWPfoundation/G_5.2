@@ -31,4 +31,13 @@ export * from "./memory/fileMemoryStore";
 export * from "./sessions/fileSessionStore";
 export * from "./sessions/runSessionTurn";
 
+export * from "./persistence/schemaVersions";
+export * from "./persistence/runMetadata";
+export * from "./persistence/sessionSchema";
+export * from "./persistence/contextSnapshotSchema";
+export * from "./persistence/fileContextSnapshotStore";
+export * from "./persistence/migrations";
+export * from "./persistence/replay";
+export * from "./persistence/archive";
+
 export * from "./utils/budget";

@@ -35,7 +35,11 @@ function buildSession(overrides: Partial<InquirySession>): InquirySession {
 test("toSessionSummary prefers stored summary over raw turn text", () => {
   const summary = toSessionSummary(
     buildSession({
-      summary: "Reviewed canon boundaries and session carryover.",
+      summary: {
+        schemaVersion: 1,
+        text: "Reviewed canon boundaries and session carryover.",
+        generatedAt: "2026-04-15T10:05:00.000Z",
+      },
       turns: [
         {
           id: "turn-1",
@@ -72,7 +76,11 @@ test("filterSessionSummaries matches summary and turn content", () => {
     toSessionSummary(
       buildSession({
         id: "session-alpha",
-        summary: "Focused on canon retrieval.",
+        summary: {
+          schemaVersion: 1,
+          text: "Focused on canon retrieval.",
+          generatedAt: "2026-04-15T10:00:00.000Z",
+        },
       })
     ),
     toSessionSummary(
