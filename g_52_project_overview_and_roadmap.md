@@ -344,8 +344,10 @@ Extend the operator inquiry UI to support the workflows M3 – M5 will need: ric
 ### M3 — Memory discipline v2
 Add triage for proposed-but-skipped memory, explicit handling of resolved `open_thread` items, stronger anti-pollution coverage under longer-lived real sessions, and eval cases that protect the new behavior.
 
-### M4 — Canon editorial workflow
+### M4 — Canon editorial workflow ✅ implemented
 Turn governed canon change into a first-class workflow: proposals, continuity-fact drafting, approval / rejection notes, explicit promotion tooling, and operator prompts that distinguish "draft as proposal" from "promote to canon".
+
+Landed via `packages/orchestration/src/canon-proposals/` (proposal schema, allowlisted canon paths with traversal protection, line-level diff, continuity-fact YAML drafter with auto-assigned `CF-NNN` ids, file-backed proposal store, applyProposal, and changelog scaffolding) plus the `/api/canon/...` endpoints in `apps/dashboard/src/server.ts` and the `editorial.html` operator UI (proposal list with status/source/path filters, doc + continuity-fact editors, diff viewer, accept / reject / needs-revision controls, review history, changelog auto-scaffold under `packages/canon/changelog/`).
 
 ### M5 — Reflection & authored artifact workflow
 A disciplined reflection loop: draft → critique → revise authoring path, artifact storage with metadata, and an explicit promotion path from reflection artifact into canon only when the operator approves.

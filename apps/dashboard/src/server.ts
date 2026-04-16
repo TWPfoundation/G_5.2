@@ -62,6 +62,30 @@ import {
 import { runSessionTurn } from "../../../packages/orchestration/src/sessions/runSessionTurn";
 import { runCompareTurn } from "../../../packages/orchestration/src/sessions/runCompareTurn";
 import { FileSessionStore } from "../../../packages/orchestration/src/sessions/fileSessionStore";
+import { randomUUID } from "node:crypto";
+import {
+  FileProposalStore,
+  PROPOSAL_SCHEMA_VERSION,
+  PROPOSAL_SOURCES,
+  PROPOSAL_STATUSES,
+  PROPOSAL_CHANGE_KINDS,
+  CanonProposalSchema,
+  type CanonProposal,
+  type ProposalReviewEntry,
+  type ProposalSource,
+  type ProposalStatus,
+  type ProposalChangeKind,
+  EDITABLE_CANON_FILES,
+  isEditableCanonFile,
+  canonFileLabel,
+  resolveCanonPath,
+  computeLineDiff,
+  applyProposal,
+  scaffoldChangelogEntry,
+  parseContinuityFacts,
+  nextContinuityFactId,
+  appendContinuityFact,
+} from "../../../packages/orchestration/src/canon-proposals";
 import { validateReport } from "../../../packages/evals/src/reporters/reportSchema";
 import { computeDiff, type JsonReport } from "./reportUtils";
 import {
@@ -75,6 +99,7 @@ const REPORTS_DIR = path.join(REPO_ROOT, "packages", "evals", "reports");
 const CANON_ROOT = path.join(REPO_ROOT, "packages", "canon");
 const SESSIONS_DIR = path.join(REPO_ROOT, "data", "inquiry-sessions");
 const MEMORY_DIR = path.join(REPO_ROOT, "data", "memory-items");
+const PROPOSALS_DIR = path.join(REPO_ROOT, "data", "canon-proposals");
 const STATIC_DIR = path.resolve(__dirname, "../public");
 const PORT = parseInt(process.env.DASHBOARD_PORT ?? "5000", 10);
 const HOST = process.env.DASHBOARD_HOST ?? "0.0.0.0";
@@ -294,6 +319,67 @@ async function ensureSessionSnapshot(
   );
 
   return result;
+}
+
+// ── Canon editorial helpers ───────────────────────────────────────────────
+
+const proposalStore = new FileProposalStore(PROPOSALS_DIR);
+
+function isProposalSource(value: unknown): value is ProposalSource {
+  return (
+    typeof value === "string" &&
+    (PROPOSAL_SOURCES as readonly string[]).includes(value)
+  );
+}
+
+function isProposalStatus(value: unknown): value is ProposalStatus {
+  return (
+    typeof value === "string" &&
+    (PROPOSAL_STATUSES as readonly string[]).includes(value)
+  );
+}
+
+function isProposalChangeKind(value: unknown): value is ProposalChangeKind {
+  return (
+    typeof value === "string" &&
+    (PROPOSAL_CHANGE_KINDS as readonly string[]).includes(value)
+  );
+}
+
+function sanitizeProposalString(value: unknown, max: number): string {
+  if (typeof value !== "string") return "";
+  return value.trim().slice(0, max);
+}
+
+async function readCanonFileSafely(relPath: string): Promise<string | null> {
+  if (!isEditableCanonFile(relPath)) {
+    return null;
+  }
+
+  try {
+    return await fs.readFile(resolveCanonPath(CANON_ROOT, relPath), "utf8");
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === "ENOENT") {
+      return null;
+    }
+    throw error;
+  }
+}
+
+function reviewActionForStatus(
+  status: ProposalStatus
+): ProposalReviewEntry["action"] {
+  switch (status) {
+    case "accepted":
+      return "accepted";
+    case "rejected":
+      return "rejected";
+    case "needs_revision":
+      return "marked_needs_revision";
+    case "pending":
+      return "marked_pending";
+  }
 }
 
 async function serveStaticHtml(res: http.ServerResponse, filename: string) {
@@ -817,6 +903,593 @@ async function handleRequest(
     return;
   }
 
+  // ── Canon editorial API ─────────────────────────────────────────────────
+
+  if (url.pathname === "/api/canon/files" && req.method === "GET") {
+    sendJson(
+      res,
+      200,
+      EDITABLE_CANON_FILES.map((file) => ({
+        path: file,
+        label: canonFileLabel(file),
+      }))
+    );
+    return;
+  }
+
+  const canonFileMatch = url.pathname.match(/^\/api\/canon\/files\/(.+)$/);
+  if (canonFileMatch && req.method === "GET") {
+    const relPath = decodeURIComponent(canonFileMatch[1]);
+    if (!isEditableCanonFile(relPath)) {
+      sendJson(res, 404, { error: "Canon file not editable or unknown" });
+      return;
+    }
+
+    try {
+      const content = await readCanonFileSafely(relPath);
+      sendJson(res, 200, {
+        path: relPath,
+        label: canonFileLabel(relPath),
+        content: content ?? "",
+        exists: content !== null,
+      });
+    } catch (err) {
+      sendJson(res, 500, {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+    return;
+  }
+
+  if (url.pathname === "/api/canon/proposals" && req.method === "GET") {
+    try {
+      let proposals = await proposalStore.list();
+      const status = url.searchParams.get("status");
+      const source = url.searchParams.get("source");
+      const targetPath = url.searchParams.get("path");
+      if (isProposalStatus(status)) {
+        proposals = proposals.filter((p) => p.status === status);
+      }
+      if (isProposalSource(source)) {
+        proposals = proposals.filter((p) => p.provenance.source === source);
+      }
+      if (targetPath) {
+        proposals = proposals.filter((p) => p.target.path === targetPath);
+      }
+      sendJson(res, 200, proposals);
+    } catch (err) {
+      sendJson(res, 500, {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+    return;
+  }
+
+  if (url.pathname === "/api/canon/proposals" && req.method === "POST") {
+    try {
+      const body = (await readJsonBody(req)) as {
+        title?: unknown;
+        targetPath?: unknown;
+        changeKind?: unknown;
+        afterContent?: unknown;
+        rationale?: unknown;
+        provenance?: {
+          source?: unknown;
+          sessionId?: unknown;
+          turnId?: unknown;
+          memoryId?: unknown;
+          reflectionId?: unknown;
+          note?: unknown;
+        };
+        createdBy?: unknown;
+      };
+
+      const title = sanitizeProposalString(body.title, 200);
+      const rationale = sanitizeProposalString(body.rationale, 4000);
+      const targetPath = sanitizeProposalString(body.targetPath, 200);
+      const changeKind = body.changeKind;
+      const provenanceSource = body.provenance?.source;
+
+      if (!title) {
+        sendJson(res, 400, { error: "title is required" });
+        return;
+      }
+
+      if (!rationale) {
+        sendJson(res, 400, { error: "rationale is required" });
+        return;
+      }
+
+      if (!isEditableCanonFile(targetPath)) {
+        sendJson(res, 400, {
+          error: `targetPath must be one of: ${EDITABLE_CANON_FILES.join(", ")}`,
+        });
+        return;
+      }
+
+      if (!isProposalChangeKind(changeKind)) {
+        sendJson(res, 400, {
+          error: `changeKind must be one of: ${PROPOSAL_CHANGE_KINDS.join(", ")}`,
+        });
+        return;
+      }
+
+      if (!isProposalSource(provenanceSource)) {
+        sendJson(res, 400, {
+          error: `provenance.source must be one of: ${PROPOSAL_SOURCES.join(", ")}`,
+        });
+        return;
+      }
+
+      const beforeContent = await readCanonFileSafely(targetPath);
+
+      let afterContent: string | null = null;
+      if (changeKind === "delete") {
+        afterContent = null;
+        if (beforeContent === null) {
+          sendJson(res, 400, {
+            error: `Cannot propose deletion of ${targetPath}: file does not exist`,
+          });
+          return;
+        }
+      } else {
+        if (typeof body.afterContent !== "string") {
+          sendJson(res, 400, {
+            error: "afterContent must be a string for create/modify proposals",
+          });
+          return;
+        }
+        afterContent = body.afterContent;
+
+        if (changeKind === "create" && beforeContent !== null) {
+          sendJson(res, 400, {
+            error: `Cannot propose creation of ${targetPath}: file already exists`,
+          });
+          return;
+        }
+        if (changeKind === "modify" && beforeContent === null) {
+          sendJson(res, 400, {
+            error: `Cannot propose modification of ${targetPath}: file does not exist`,
+          });
+          return;
+        }
+      }
+
+      const now = new Date().toISOString();
+      const provenance = {
+        source: provenanceSource,
+        sessionId: sanitizeProposalString(body.provenance?.sessionId, 200) || undefined,
+        turnId: sanitizeProposalString(body.provenance?.turnId, 200) || undefined,
+        memoryId: sanitizeProposalString(body.provenance?.memoryId, 200) || undefined,
+        reflectionId:
+          sanitizeProposalString(body.provenance?.reflectionId, 200) || undefined,
+        note: sanitizeProposalString(body.provenance?.note, 1000) || undefined,
+      };
+
+      const proposal: CanonProposal = CanonProposalSchema.parse({
+        schemaVersion: PROPOSAL_SCHEMA_VERSION,
+        id: randomUUID(),
+        title,
+        status: "pending",
+        changeKind,
+        target: {
+          path: targetPath,
+          label: canonFileLabel(targetPath),
+          kind: targetPath.endsWith(".yaml")
+            ? targetPath === "manifest.yaml"
+              ? "manifest"
+              : targetPath === "glossary.yaml"
+                ? "glossary_term"
+                : targetPath === "continuity-facts.yaml"
+                  ? "continuity_fact"
+                  : "canon_document"
+            : "canon_document",
+        },
+        beforeContent,
+        afterContent,
+        rationale,
+        provenance,
+        createdAt: now,
+        updatedAt: now,
+        reviewHistory: [
+          {
+            at: now,
+            action: "created",
+            status: "pending",
+            note: provenance.note,
+          },
+        ],
+        createdBy: sanitizeProposalString(body.createdBy, 100) || undefined,
+      });
+
+      const saved = await proposalStore.save(proposal);
+      sendJson(res, 201, saved);
+    } catch (err) {
+      sendJson(res, 400, {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+    return;
+  }
+
+  if (
+    url.pathname === "/api/canon/proposals/draft-continuity-fact" &&
+    req.method === "POST"
+  ) {
+    try {
+      const body = (await readJsonBody(req)) as {
+        statement?: unknown;
+        category?: unknown;
+        status?: unknown;
+        source?: unknown;
+        rationale?: unknown;
+        provenance?: {
+          source?: unknown;
+          sessionId?: unknown;
+          turnId?: unknown;
+          memoryId?: unknown;
+          reflectionId?: unknown;
+          note?: unknown;
+        };
+        title?: unknown;
+        factId?: unknown;
+      };
+
+      const statement = sanitizeProposalString(body.statement, 1000);
+      const category = sanitizeProposalString(body.category, 80);
+      const status = sanitizeProposalString(body.status, 40) || "active";
+      const source = sanitizeProposalString(body.source, 200) || undefined;
+      const rationale = sanitizeProposalString(body.rationale, 4000);
+      const provenanceSource = body.provenance?.source ?? "manual";
+
+      if (!statement) {
+        sendJson(res, 400, { error: "statement is required" });
+        return;
+      }
+      if (!category) {
+        sendJson(res, 400, { error: "category is required" });
+        return;
+      }
+      if (!rationale) {
+        sendJson(res, 400, { error: "rationale is required" });
+        return;
+      }
+      if (!isProposalSource(provenanceSource)) {
+        sendJson(res, 400, {
+          error: `provenance.source must be one of: ${PROPOSAL_SOURCES.join(", ")}`,
+        });
+        return;
+      }
+
+      const beforeContent = await readCanonFileSafely("continuity-facts.yaml");
+      if (beforeContent === null) {
+        sendJson(res, 500, { error: "continuity-facts.yaml is missing" });
+        return;
+      }
+
+      const facts = parseContinuityFacts(beforeContent);
+      const requestedId = sanitizeProposalString(body.factId, 20);
+      const factId = requestedId || nextContinuityFactId(facts);
+
+      if (!/^CF-\d{3,}$/.test(factId)) {
+        sendJson(res, 400, {
+          error: `factId must match CF-NNN; got ${factId}`,
+        });
+        return;
+      }
+
+      if (facts.some((fact) => fact.id === factId)) {
+        sendJson(res, 400, {
+          error: `Continuity fact ${factId} already exists; use a modify proposal instead`,
+        });
+        return;
+      }
+
+      const afterContent = appendContinuityFact(beforeContent, {
+        id: factId,
+        statement,
+        category,
+        status,
+        source,
+      });
+
+      const now = new Date().toISOString();
+      const provenance = {
+        source: provenanceSource,
+        sessionId:
+          sanitizeProposalString(body.provenance?.sessionId, 200) || undefined,
+        turnId: sanitizeProposalString(body.provenance?.turnId, 200) || undefined,
+        memoryId: sanitizeProposalString(body.provenance?.memoryId, 200) || undefined,
+        reflectionId:
+          sanitizeProposalString(body.provenance?.reflectionId, 200) || undefined,
+        note: sanitizeProposalString(body.provenance?.note, 1000) || undefined,
+      };
+
+      const title =
+        sanitizeProposalString(body.title, 200) ||
+        `Add continuity fact ${factId}`;
+
+      const proposal = CanonProposalSchema.parse({
+        schemaVersion: PROPOSAL_SCHEMA_VERSION,
+        id: randomUUID(),
+        title,
+        status: "pending",
+        changeKind: "modify",
+        target: {
+          path: "continuity-facts.yaml",
+          label: canonFileLabel("continuity-facts.yaml"),
+          kind: "continuity_fact",
+          factId,
+        },
+        beforeContent,
+        afterContent,
+        rationale,
+        provenance,
+        createdAt: now,
+        updatedAt: now,
+        reviewHistory: [
+          {
+            at: now,
+            action: "created",
+            status: "pending",
+            note: `Drafted continuity fact ${factId} in category ${category}`,
+          },
+        ],
+      });
+
+      const saved = await proposalStore.save(proposal);
+      sendJson(res, 201, saved);
+    } catch (err) {
+      sendJson(res, 400, {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+    return;
+  }
+
+  const proposalIdMatch = url.pathname.match(
+    /^\/api\/canon\/proposals\/([0-9a-f-]{36})$/i
+  );
+  if (proposalIdMatch && req.method === "GET") {
+    try {
+      const proposal = await proposalStore.load(proposalIdMatch[1]);
+      if (!proposal) {
+        sendJson(res, 404, { error: "Proposal not found" });
+        return;
+      }
+      sendJson(res, 200, proposal);
+    } catch (err) {
+      sendJson(res, 500, {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+    return;
+  }
+
+  if (proposalIdMatch && req.method === "PATCH") {
+    try {
+      const proposal = await proposalStore.load(proposalIdMatch[1]);
+      if (!proposal) {
+        sendJson(res, 404, { error: "Proposal not found" });
+        return;
+      }
+
+      const body = (await readJsonBody(req)) as {
+        status?: unknown;
+        note?: unknown;
+        reviewer?: unknown;
+        rationale?: unknown;
+        afterContent?: unknown;
+        title?: unknown;
+      };
+
+      const note = sanitizeProposalString(body.note, 2000) || undefined;
+      const reviewer = sanitizeProposalString(body.reviewer, 100) || undefined;
+      const now = new Date().toISOString();
+      const reviewHistory = [...proposal.reviewHistory];
+      let updated: CanonProposal = { ...proposal, updatedAt: now };
+
+      if (typeof body.title === "string") {
+        const newTitle = sanitizeProposalString(body.title, 200);
+        if (newTitle && newTitle !== proposal.title) {
+          updated.title = newTitle;
+          reviewHistory.push({
+            at: now,
+            action: "edited",
+            note: `title → ${newTitle}`,
+            reviewer,
+          });
+        }
+      }
+
+      if (typeof body.rationale === "string") {
+        const newRationale = sanitizeProposalString(body.rationale, 4000);
+        if (newRationale && newRationale !== proposal.rationale) {
+          updated.rationale = newRationale;
+          reviewHistory.push({
+            at: now,
+            action: "edited",
+            note: "rationale updated",
+            reviewer,
+          });
+        }
+      }
+
+      if (typeof body.afterContent === "string") {
+        if (proposal.status === "accepted" || proposal.status === "rejected") {
+          sendJson(res, 400, {
+            error: `Cannot edit afterContent of a ${proposal.status} proposal`,
+          });
+          return;
+        }
+        if (updated.changeKind === "delete") {
+          sendJson(res, 400, {
+            error: "Cannot set afterContent on a delete proposal",
+          });
+          return;
+        }
+        if (body.afterContent !== proposal.afterContent) {
+          updated.afterContent = body.afterContent;
+          reviewHistory.push({
+            at: now,
+            action: "edited",
+            note: "afterContent updated",
+            reviewer,
+          });
+        }
+      }
+
+      if (body.status !== undefined) {
+        if (!isProposalStatus(body.status)) {
+          sendJson(res, 400, {
+            error: `status must be one of: ${PROPOSAL_STATUSES.join(", ")}`,
+          });
+          return;
+        }
+
+        const target = body.status;
+        const current = proposal.status;
+        // State machine: terminal states cannot transition further.
+        if (
+          (current === "accepted" || current === "rejected") &&
+          target !== current
+        ) {
+          sendJson(res, 400, {
+            error: `Proposal in terminal state '${current}' cannot transition`,
+          });
+          return;
+        }
+
+        if (current !== target || note !== undefined) {
+          updated.status = target;
+          reviewHistory.push({
+            at: now,
+            action: reviewActionForStatus(target),
+            status: target,
+            note,
+            reviewer,
+          });
+
+          if (target === "accepted") {
+            updated.acceptedAt = now;
+            const apply = await applyProposal(CANON_ROOT, updated, { now });
+            updated.appliedAt = apply.appliedAt;
+            reviewHistory.push({
+              at: apply.appliedAt,
+              action: "applied",
+              note: `Wrote ${apply.relPath}`,
+              reviewer,
+            });
+
+            const scaffold = await scaffoldChangelogEntry(
+              CANON_ROOT,
+              { ...updated, reviewHistory },
+              { now }
+            );
+            updated.changelogPath = scaffold.relPath;
+            reviewHistory.push({
+              at: now,
+              action: "changelog_scaffolded",
+              note: scaffold.relPath,
+              reviewer,
+            });
+          } else if (target === "rejected") {
+            updated.rejectedAt = now;
+          }
+        }
+      } else if (note !== undefined) {
+        reviewHistory.push({
+          at: now,
+          action: "edited",
+          status: proposal.status,
+          note,
+          reviewer,
+        });
+      }
+
+      updated.reviewHistory = reviewHistory;
+      const saved = await proposalStore.save(updated);
+      sendJson(res, 200, saved);
+    } catch (err) {
+      sendJson(res, 500, {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+    return;
+  }
+
+  if (proposalIdMatch && req.method === "DELETE") {
+    try {
+      const existing = await proposalStore.load(proposalIdMatch[1]);
+      if (!existing) {
+        sendJson(res, 404, { error: "Proposal not found" });
+        return;
+      }
+      if (existing.status === "accepted") {
+        sendJson(res, 400, {
+          error:
+            "Cannot delete an accepted proposal; it is already part of canon history",
+        });
+        return;
+      }
+      const deleted = await proposalStore.delete(proposalIdMatch[1]);
+      sendJson(res, 200, { deleted });
+    } catch (err) {
+      sendJson(res, 500, {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+    return;
+  }
+
+  const proposalDiffMatch = url.pathname.match(
+    /^\/api\/canon\/proposals\/([0-9a-f-]{36})\/diff$/i
+  );
+  if (proposalDiffMatch && req.method === "GET") {
+    try {
+      const proposal = await proposalStore.load(proposalDiffMatch[1]);
+      if (!proposal) {
+        sendJson(res, 404, { error: "Proposal not found" });
+        return;
+      }
+      const diff = computeLineDiff(proposal.beforeContent, proposal.afterContent);
+      sendJson(res, 200, {
+        proposalId: proposal.id,
+        target: proposal.target,
+        changeKind: proposal.changeKind,
+        ...diff,
+      });
+    } catch (err) {
+      sendJson(res, 500, {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+    return;
+  }
+
+  if (
+    url.pathname === "/api/canon/continuity-facts/next-id" &&
+    req.method === "GET"
+  ) {
+    try {
+      const content = await readCanonFileSafely("continuity-facts.yaml");
+      if (content === null) {
+        sendJson(res, 500, { error: "continuity-facts.yaml is missing" });
+        return;
+      }
+      const facts = parseContinuityFacts(content);
+      sendJson(res, 200, {
+        nextId: nextContinuityFactId(facts),
+        existingCount: facts.length,
+      });
+    } catch (err) {
+      sendJson(res, 500, {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+    return;
+  }
+
   const reportMatch = url.pathname.match(/^\/api\/reports\/(.+\.json)$/);
   if (reportMatch) {
     const reportPath = path.join(REPORTS_DIR, reportMatch[1]);
@@ -844,6 +1517,11 @@ async function handleRequest(
 
   if (url.pathname === "/inquiry.html") {
     await serveStaticHtml(res, "inquiry.html");
+    return;
+  }
+
+  if (url.pathname === "/editorial.html") {
+    await serveStaticHtml(res, "editorial.html");
     return;
   }
 

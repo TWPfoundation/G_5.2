@@ -28,6 +28,7 @@ export * from "./pipeline/runTurn";
 export * from "./pipeline/revision";
 
 export * from "./memory/fileMemoryStore";
+export * from "./canon-proposals";
 export * from "./sessions/fileSessionStore";
 export * from "./sessions/runSessionTurn";
 export * from "./sessions/runCompareTurn";

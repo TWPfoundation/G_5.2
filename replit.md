@@ -54,6 +54,17 @@ The dashboard runs on port **5000** (bound to `0.0.0.0` for Replit preview).
 - `POST /api/memory/:id/:action` — State transitions (`approve` | `reject` | `resolve` | `archive` | `supersede`)
 - `GET /api/memory/conflicts` — Preview duplicate/contradiction conflicts for a candidate
 - `DELETE /api/memory/:id` — Hard-delete a memory item
+- `GET /editorial.html` — Canon editorial workflow UI (M4)
+- `GET /api/canon/files` — List editable canon files
+- `GET /api/canon/files/:path` — Read a canon file's current content
+- `GET /api/canon/proposals` — List proposals (filter by `status`, `source`, `path`)
+- `POST /api/canon/proposals` — Create a pending proposal against a canon file
+- `POST /api/canon/proposals/draft-continuity-fact` — Drafting path for new continuity facts
+- `GET /api/canon/proposals/:id` — Full proposal JSON
+- `PATCH /api/canon/proposals/:id` — Update status (state machine), rationale, or afterContent
+- `DELETE /api/canon/proposals/:id` — Delete a non-accepted proposal
+- `GET /api/canon/proposals/:id/diff` — Line-level diff of `beforeContent` vs `afterContent`
+- `GET /api/canon/continuity-facts/next-id` — Suggest the next available `CF-NNN` id
 
 ## Memory discipline v2 (M3)
 
@@ -79,6 +90,7 @@ The dashboard runs on port **5000** (bound to `0.0.0.0` for Replit preview).
 - `data/inquiry-sessions/` — Persisted session JSON files (versioned via `schemaVersion`)
 - `data/memory-items/` — Durable memory store (versioned via `schemaVersion`)
 - `data/context-snapshots/` — First-class per-turn context snapshots (replay-ready)
+- `data/canon-proposals/` — Pending / accepted / rejected canon proposals (M4)
 - `packages/evals/reports/` — Evaluation report outputs (versioned via `schemaVersion`)
 
 ## Persistence layer (M1)
@@ -95,6 +107,27 @@ The dashboard runs on port **5000** (bound to `0.0.0.0` for Replit preview).
 - `exportSessionBundle` / `importSessionBundle` in `persistence/archive.ts`
   serialize a session and all of its snapshots into a single bundle for
   archive and round-trip import.
+
+## Canon editorial workflow (M4)
+
+- `packages/orchestration/src/canon-proposals/` is the proposal subsystem.
+  Proposals carry `schemaVersion`, target an allowlisted canon file (path
+  traversal is rejected at the schema layer), and move through a
+  `pending → accepted | rejected | needs_revision` state machine. `accepted`
+  and `rejected` are terminal; `needs_revision` and `pending` can transition
+  freely.
+- On accept, `applyProposal` writes `afterContent` to the target canon file
+  (or deletes it for `delete` proposals) and `scaffoldChangelogEntry` creates
+  an auto-numbered `packages/canon/changelog/NNNN-<slug>.md` capturing
+  rationale, reviewer notes, and provenance.
+- Continuity facts are drafted as YAML text (preserving comments / formatting)
+  and the next `CF-NNN` id is suggested by scanning the live file.
+- Proposals are stored as JSON in `data/canon-proposals/`, separate from the
+  canon directory itself.
+- Operator UI: `apps/dashboard/public/editorial.html` (linked from the main
+  dashboard nav). Supports filtering by status / source / path, doc and
+  continuity-fact editors, line-level diff viewer, accept / reject /
+  needs-revision controls with reviewer notes, and review history.
 
 ## Environment Variables
 

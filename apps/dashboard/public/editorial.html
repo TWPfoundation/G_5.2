@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>G_5.2 — Editorial</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0c0e14;
+      --surface: #13161f;
+      --surface-2: #1a1e2a;
+      --surface-3: #222736;
+      --border: #2a3040;
+      --text: #e2e4ea;
+      --text-dim: #8b90a0;
+      --accent: #6c8aff;
+      --accent-dim: #3d508a;
+      --pass: #34d399;
+      --pass-bg: rgba(52,211,153,0.10);
+      --fail: #f87171;
+      --fail-bg: rgba(248,113,113,0.10);
+      --warn: #fbbf24;
+      --warn-bg: rgba(251,191,36,0.10);
+      --info-bg: rgba(108,138,255,0.10);
+      --radius: 8px;
+      --radius-lg: 12px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    .header {
+      padding: 0 32px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: stretch; gap: 0;
+      background: var(--surface); height: 52px;
+    }
+    .header-brand {
+      display: flex; align-items: center; gap: 12px;
+      padding-right: 24px; border-right: 1px solid var(--border);
+    }
+    .header-brand h1 { font-size: 15px; font-weight: 700; }
+    .header-brand .tag {
+      font-size: 10px; font-weight: 600; padding: 2px 7px;
+      border-radius: 3px; background: var(--accent-dim); color: var(--accent);
+      letter-spacing: 0.5px;
+    }
+    .nav-tabs { display: flex; align-items: stretch; gap: 0; padding-left: 16px; }
+    .nav-tab {
+      display: flex; align-items: center; padding: 0 18px;
+      font-size: 13px; font-weight: 500; color: var(--text-dim);
+      cursor: pointer; border-bottom: 2px solid transparent;
+      transition: all 0.15s; text-decoration: none;
+    }
+    .nav-tab:hover { color: var(--text); }
+    .nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .header .spacer { flex: 1; }
+
+    .container { max-width: 1280px; margin: 0 auto; padding: 24px 32px; }
+    .layout { display: grid; grid-template-columns: 360px 1fr; gap: 24px; }
+    .panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 16px 18px;
+    }
+    .panel h2 {
+      font-size: 11px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 1.2px; color: var(--text-dim); margin-bottom: 12px;
+    }
+
+    .filter-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+    .filter-row select, .filter-row input {
+      background: var(--surface-2); color: var(--text); border: 1px solid var(--border);
+      padding: 6px 10px; border-radius: var(--radius);
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; flex: 1; min-width: 80px;
+    }
+
+    .proposal-list { display: flex; flex-direction: column; gap: 8px; max-height: 70vh; overflow-y: auto; }
+    .proposal-item {
+      padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius);
+      cursor: pointer; transition: border-color 0.15s, background 0.15s;
+      background: var(--surface-2);
+    }
+    .proposal-item:hover { border-color: var(--accent-dim); }
+    .proposal-item.active { border-color: var(--accent); background: var(--surface-3); }
+    .proposal-item .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .proposal-item .title { font-size: 13px; font-weight: 600; }
+    .proposal-item .meta { font-size: 11px; color: var(--text-dim); margin-top: 4px; font-family: 'JetBrains Mono', monospace; }
+
+    .status-badge {
+      font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 3px;
+      text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap;
+    }
+    .status-pending { background: var(--info-bg); color: var(--accent); }
+    .status-accepted { background: var(--pass-bg); color: var(--pass); }
+    .status-rejected { background: var(--fail-bg); color: var(--fail); }
+    .status-needs_revision { background: var(--warn-bg); color: var(--warn); }
+
+    .btn {
+      padding: 6px 14px; border-radius: var(--radius);
+      border: 1px solid var(--border); background: var(--surface-2);
+      color: var(--text); font-size: 12px; font-weight: 500;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .btn:hover { border-color: var(--accent-dim); color: var(--accent); }
+    .btn-primary { background: var(--accent-dim); border-color: var(--accent-dim); color: var(--accent); }
+    .btn-primary:hover { background: var(--accent); color: #0c0e14; border-color: var(--accent); }
+    .btn-pass { background: rgba(52,211,153,0.15); border-color: rgba(52,211,153,0.3); color: var(--pass); }
+    .btn-pass:hover { background: var(--pass); color: #0c0e14; border-color: var(--pass); }
+    .btn-fail { background: rgba(248,113,113,0.12); border-color: rgba(248,113,113,0.3); color: var(--fail); }
+    .btn-fail:hover { background: var(--fail); color: #0c0e14; border-color: var(--fail); }
+    .btn-warn { background: rgba(251,191,36,0.12); border-color: rgba(251,191,36,0.3); color: var(--warn); }
+    .btn-warn:hover { background: var(--warn); color: #0c0e14; border-color: var(--warn); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .form-row { margin-bottom: 12px; }
+    .form-row label { display: block; font-size: 11px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 4px; }
+    .form-row input, .form-row select, .form-row textarea {
+      width: 100%; background: var(--surface-2); color: var(--text);
+      border: 1px solid var(--border); padding: 8px 10px;
+      border-radius: var(--radius); font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    }
+    .form-row textarea { font-family: 'JetBrains Mono', monospace; min-height: 110px; resize: vertical; }
+    .form-row .hint { font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+
+    .tabs { display: flex; gap: 0; margin-bottom: 16px; border-bottom: 1px solid var(--border); }
+    .tab { padding: 10px 16px; font-size: 12px; font-weight: 500; color: var(--text-dim); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; }
+    .tab:hover { color: var(--text); }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    .detail-section { margin-bottom: 16px; }
+    .detail-section h3 { font-size: 11px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; }
+    .kv { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; font-size: 12px; font-family: 'JetBrains Mono', monospace; }
+    .kv .k { color: var(--text-dim); }
+
+    .diff-block { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .diff-stats { padding: 8px 14px; border-bottom: 1px solid var(--border); font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--text-dim); display: flex; gap: 16px; }
+    .diff-stats .gain { color: var(--pass); }
+    .diff-stats .loss { color: var(--fail); }
+    .diff-pre { font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.5; max-height: 480px; overflow: auto; padding: 0; }
+    .diff-line { display: grid; grid-template-columns: 48px 48px 1fr; padding: 0 8px; }
+    .diff-line .ln { color: var(--text-dim); padding-right: 8px; user-select: none; text-align: right; font-size: 11px; }
+    .diff-line .txt { white-space: pre; word-break: break-all; }
+    .diff-line.add { background: var(--pass-bg); }
+    .diff-line.add .txt { color: var(--pass); }
+    .diff-line.add .txt::before { content: "+ "; }
+    .diff-line.remove { background: var(--fail-bg); }
+    .diff-line.remove .txt { color: var(--fail); }
+    .diff-line.remove .txt::before { content: "- "; }
+    .diff-line.context .txt::before { content: "  "; color: var(--text-dim); }
+
+    .review-list { list-style: none; padding: 0; }
+    .review-list li { padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 6px; background: var(--surface-2); font-size: 12px; }
+    .review-list .review-meta { font-size: 11px; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
+
+    .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+    .empty { color: var(--text-dim); font-size: 13px; text-align: center; padding: 60px 0; }
+    .editor-area { display: grid; grid-template-columns: 1fr; gap: 12px; }
+    .editor-area .pane { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; }
+    .editor-area .pane h4 { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
+
+    .toast {
+      position: fixed; bottom: 20px; right: 20px;
+      padding: 10px 16px; border-radius: var(--radius);
+      font-size: 12px; font-weight: 500;
+      background: var(--surface-3); border: 1px solid var(--border);
+      color: var(--text); max-width: 360px; z-index: 1000;
+      transition: opacity 0.3s; opacity: 0;
+    }
+    .toast.show { opacity: 1; }
+    .toast.error { border-color: var(--fail); color: var(--fail); }
+    .toast.success { border-color: var(--pass); color: var(--pass); }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-brand">
+    <h1>G_5.2</h1>
+    <span class="tag">EDITORIAL</span>
+  </div>
+  <nav class="nav-tabs">
+    <a class="nav-tab" href="/">Reports</a>
+    <a class="nav-tab" href="/#diff-page">Diff</a>
+    <a class="nav-tab" href="/inquiry.html">Inquiry</a>
+    <a class="nav-tab active" href="/editorial.html">Editorial</a>
+  </nav>
+  <div class="spacer"></div>
+</div>
+
+<div class="container">
+  <div class="layout">
+    <!-- Left panel: proposal list + new draft controls -->
+    <aside>
+      <div class="panel" style="margin-bottom: 16px;">
+        <h2>Proposals</h2>
+        <div class="filter-row">
+          <select id="filterStatus">
+            <option value="">all status</option>
+            <option value="pending">pending</option>
+            <option value="needs_revision">needs_revision</option>
+            <option value="accepted">accepted</option>
+            <option value="rejected">rejected</option>
+          </select>
+          <select id="filterSource">
+            <option value="">all sources</option>
+            <option value="manual">manual</option>
+            <option value="inquiry_turn">inquiry_turn</option>
+            <option value="memory_item">memory_item</option>
+            <option value="reflection_output">reflection_output</option>
+          </select>
+        </div>
+        <div id="proposalList" class="proposal-list"><div class="empty">Loading…</div></div>
+      </div>
+
+      <div class="panel">
+        <h2>New draft</h2>
+        <div class="toolbar">
+          <button class="btn btn-primary" id="newDocBtn">Edit canon doc</button>
+          <button class="btn" id="newFactBtn">Draft continuity fact</button>
+        </div>
+        <div class="hint" style="font-size:11px;color:var(--text-dim);">
+          Drafting creates a <strong>pending</strong> proposal. Nothing is written
+          to canon until you accept it from the review panel.
+        </div>
+      </div>
+    </aside>
+
+    <!-- Right panel: detail / editor -->
+    <main>
+      <div id="detail" class="panel">
+        <div class="empty">
+          Select a proposal on the left, or click <strong>Edit canon doc</strong>
+          / <strong>Draft continuity fact</strong> to start a new one.
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+const $  = (s, p) => (p || document).querySelector(s);
+const $$ = (s, p) => [...(p || document).querySelectorAll(s)];
+const esc = s => (s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+let state = {
+  proposals: [],
+  files: [],
+  selectedId: null,
+  activeTab: 'overview',
+  draftMode: null, // null | 'doc' | 'fact'
+  draft: null,
+};
+
+function toast(msg, kind = '') {
+  const t = $('#toast');
+  t.className = `toast show ${kind}`;
+  t.textContent = msg;
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.className = 'toast'; }, 3500);
+}
+
+async function api(path, opts) {
+  const res = await fetch(path, {
+    headers: { 'Content-Type': 'application/json' },
+    ...opts,
+  });
+  let body = null;
+  try { body = await res.json(); } catch { /* ignore */ }
+  if (!res.ok) {
+    const message = (body && body.error) || `${res.status} ${res.statusText}`;
+    throw new Error(message);
+  }
+  return body;
+}
+
+async function loadFiles() {
+  state.files = await api('/api/canon/files');
+}
+
+async function loadProposals() {
+  const status = $('#filterStatus').value;
+  const source = $('#filterSource').value;
+  const params = new URLSearchParams();
+  if (status) params.set('status', status);
+  if (source) params.set('source', source);
+  const qs = params.toString();
+  state.proposals = await api(`/api/canon/proposals${qs ? `?${qs}` : ''}`);
+  renderList();
+}
+
+function renderList() {
+  const el = $('#proposalList');
+  if (!state.proposals.length) {
+    el.innerHTML = '<div class="empty">No proposals yet.</div>';
+    return;
+  }
+  el.innerHTML = state.proposals.map(p => `
+    <div class="proposal-item ${p.id === state.selectedId ? 'active' : ''}" data-id="${esc(p.id)}">
+      <div class="row">
+        <div class="title">${esc(p.title)}</div>
+        <span class="status-badge status-${esc(p.status)}">${esc(p.status)}</span>
+      </div>
+      <div class="meta">${esc(p.target.path)} · ${esc(p.changeKind)} · ${esc(p.provenance.source)}</div>
+      <div class="meta">${esc(p.updatedAt.slice(0, 19).replace('T', ' '))}</div>
+    </div>
+  `).join('');
+  $$('.proposal-item').forEach(el => {
+    el.addEventListener('click', () => selectProposal(el.dataset.id));
+  });
+}
+
+async function selectProposal(id) {
+  state.selectedId = id;
+  state.draftMode = null;
+  state.draft = null;
+  renderList();
+  await renderDetail();
+}
+
+function tabBar(active, tabs) {
+  return `<div class="tabs">${tabs.map(t => `
+    <div class="tab ${t === active ? 'active' : ''}" data-tab="${t}">${t}</div>
+  `).join('')}</div>`;
+}
+
+function renderDiffBlock(diff) {
+  if (!diff || !diff.lines) {
+    return '<div class="empty">No diff available.</div>';
+  }
+  const lines = diff.lines.map(line => {
+    const before = line.beforeLineNumber ?? '';
+    const after = line.afterLineNumber ?? '';
+    return `<div class="diff-line ${line.op}"><span class="ln">${before}</span><span class="ln">${after}</span><span class="txt">${esc(line.text)}</span></div>`;
+  }).join('');
+  return `
+    <div class="diff-block">
+      <div class="diff-stats">
+        <span class="gain">+${diff.stats.added}</span>
+        <span class="loss">−${diff.stats.removed}</span>
+        <span>context ${diff.stats.unchanged}</span>
+      </div>
+      <div class="diff-pre">${lines}</div>
+    </div>
+  `;
+}
+
+async function renderDetail() {
+  const root = $('#detail');
+  if (state.draftMode === 'doc') {
+    root.innerHTML = renderDocEditor();
+    bindDocEditor();
+    return;
+  }
+  if (state.draftMode === 'fact') {
+    root.innerHTML = renderFactDrafter();
+    bindFactDrafter();
+    return;
+  }
+
+  const proposal = state.proposals.find(p => p.id === state.selectedId);
+  if (!proposal) {
+    root.innerHTML = '<div class="empty">Select a proposal or start a new draft.</div>';
+    return;
+  }
+
+  let diff = null;
+  try {
+    diff = await api(`/api/canon/proposals/${proposal.id}/diff`);
+  } catch (err) {
+    diff = null;
+  }
+
+  const tabs = ['overview', 'diff', 'rationale', 'review', 'review-history'];
+  if (state.activeTab === null || !tabs.includes(state.activeTab)) state.activeTab = 'overview';
+
+  const provenance = proposal.provenance;
+  const provenanceList = Object.entries(provenance)
+    .filter(([k, v]) => v && k !== 'source')
+    .map(([k, v]) => `<div class="k">${esc(k)}</div><div>${esc(String(v))}</div>`)
+    .join('');
+
+  const overview = `
+    <div class="detail-section">
+      <h3>Target</h3>
+      <div class="kv">
+        <div class="k">file</div><div>${esc(proposal.target.path)} (${esc(proposal.target.label)})</div>
+        <div class="k">kind</div><div>${esc(proposal.target.kind)}</div>
+        <div class="k">change</div><div>${esc(proposal.changeKind)}</div>
+        ${proposal.target.factId ? `<div class="k">fact id</div><div>${esc(proposal.target.factId)}</div>` : ''}
+        ${proposal.changelogPath ? `<div class="k">changelog</div><div>${esc(proposal.changelogPath)}</div>` : ''}
+      </div>
+    </div>
+    <div class="detail-section">
+      <h3>Provenance</h3>
+      <div class="kv">
+        <div class="k">source</div><div>${esc(provenance.source)}</div>
+        ${provenanceList}
+      </div>
+    </div>
+    <div class="detail-section">
+      <h3>Timeline</h3>
+      <div class="kv">
+        <div class="k">created</div><div>${esc(proposal.createdAt)}</div>
+        <div class="k">updated</div><div>${esc(proposal.updatedAt)}</div>
+        ${proposal.acceptedAt ? `<div class="k">accepted</div><div>${esc(proposal.acceptedAt)}</div>` : ''}
+        ${proposal.rejectedAt ? `<div class="k">rejected</div><div>${esc(proposal.rejectedAt)}</div>` : ''}
+        ${proposal.appliedAt ? `<div class="k">applied</div><div>${esc(proposal.appliedAt)}</div>` : ''}
+      </div>
+    </div>
+  `;
+
+  const diffPane = renderDiffBlock(diff);
+  const rationalePane = `<div class="diff-pre" style="padding:14px;white-space:pre-wrap;">${esc(proposal.rationale)}</div>`;
+
+  const isTerminal = proposal.status === 'accepted' || proposal.status === 'rejected';
+  const reviewControls = isTerminal ? `
+    <div class="empty">Proposal is in a terminal state (${esc(proposal.status)}). No further transitions allowed.</div>
+  ` : `
+    <div class="form-row">
+      <label>Reviewer note</label>
+      <textarea id="reviewNote" placeholder="Why are you accepting / rejecting / requesting revision?"></textarea>
+    </div>
+    <div class="form-row">
+      <label>Reviewer (optional)</label>
+      <input id="reviewerName" placeholder="operator name" />
+    </div>
+    <div class="toolbar">
+      <button class="btn btn-pass" id="acceptBtn">Promote to canon</button>
+      <button class="btn btn-warn" id="needsRevisionBtn">Needs revision</button>
+      <button class="btn btn-fail" id="rejectBtn">Reject</button>
+      ${proposal.status !== 'pending' ? '<button class="btn" id="reopenBtn">Reopen as pending</button>' : ''}
+    </div>
+    <div class="hint" style="font-size:11px;color:var(--text-dim);margin-top:8px;">
+      Promoting writes <code>${esc(proposal.target.path)}</code> and scaffolds a changelog entry under <code>packages/canon/changelog/</code>.
+    </div>
+    <div class="toolbar" style="margin-top:14px;">
+      <button class="btn" id="deleteBtn">Delete proposal</button>
+    </div>
+  `;
+
+  const history = (proposal.reviewHistory || []).map(entry => `
+    <li>
+      <div>${esc(entry.action)}${entry.status ? ` → ${esc(entry.status)}` : ''}${entry.note ? `: ${esc(entry.note)}` : ''}</div>
+      <div class="review-meta">${esc(entry.at)}${entry.reviewer ? ` · ${esc(entry.reviewer)}` : ''}</div>
+    </li>
+  `).join('');
+
+  const tabContents = {
+    overview,
+    diff: diffPane,
+    rationale: rationalePane,
+    review: reviewControls,
+    'review-history': history ? `<ul class="review-list">${history}</ul>` : '<div class="empty">No history yet.</div>',
+  };
+
+  root.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px;">
+      <div>
+        <div style="font-size:18px;font-weight:600;">${esc(proposal.title)}</div>
+        <div style="font-size:12px;color:var(--text-dim);font-family:'JetBrains Mono',monospace;margin-top:4px;">
+          ${esc(proposal.id)}
+        </div>
+      </div>
+      <span class="status-badge status-${esc(proposal.status)}">${esc(proposal.status)}</span>
+    </div>
+    ${tabBar(state.activeTab, tabs)}
+    <div id="tabBody">${tabContents[state.activeTab] || ''}</div>
+  `;
+
+  $$('.tab').forEach(el => {
+    el.addEventListener('click', () => {
+      state.activeTab = el.dataset.tab;
+      renderDetail();
+    });
+  });
+
+  if (!isTerminal) {
+    $('#acceptBtn')?.addEventListener('click', () => transition('accepted'));
+    $('#needsRevisionBtn')?.addEventListener('click', () => transition('needs_revision'));
+    $('#rejectBtn')?.addEventListener('click', () => transition('rejected'));
+    $('#reopenBtn')?.addEventListener('click', () => transition('pending'));
+    $('#deleteBtn')?.addEventListener('click', deleteProposal);
+  }
+}
+
+async function transition(status) {
+  const proposal = state.proposals.find(p => p.id === state.selectedId);
+  if (!proposal) return;
+  const note = $('#reviewNote')?.value || '';
+  const reviewer = $('#reviewerName')?.value || '';
+  if (status === 'rejected' && !note.trim()) {
+    if (!confirm('Reject without a note?')) return;
+  }
+  if (status === 'accepted' && !confirm(`Promote "${proposal.title}" to canon? This will write ${proposal.target.path} and scaffold a changelog entry.`)) return;
+
+  try {
+    const updated = await api(`/api/canon/proposals/${proposal.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status, note, reviewer }),
+    });
+    toast(`Proposal ${status}.`, status === 'accepted' ? 'success' : '');
+    await loadProposals();
+    state.selectedId = updated.id;
+    state.activeTab = status === 'accepted' ? 'overview' : 'review-history';
+    renderList();
+    await renderDetail();
+  } catch (err) {
+    toast(err.message, 'error');
+  }
+}
+
+async function deleteProposal() {
+  const proposal = state.proposals.find(p => p.id === state.selectedId);
+  if (!proposal) return;
+  if (!confirm(`Delete proposal "${proposal.title}"? This cannot be undone.`)) return;
+  try {
+    await api(`/api/canon/proposals/${proposal.id}`, { method: 'DELETE' });
+    toast('Proposal deleted.');
+    state.selectedId = null;
+    await loadProposals();
+    await renderDetail();
+  } catch (err) {
+    toast(err.message, 'error');
+  }
+}
+
+// ── Doc editor ──────────────────────────────────────────────────────────────
+function renderDocEditor() {
+  const draft = state.draft || {
+    targetPath: state.files[0]?.path || '',
+    title: '',
+    rationale: '',
+    afterContent: '',
+    provenanceSource: 'manual',
+    provenanceNote: '',
+    sessionId: '',
+    turnId: '',
+    memoryId: '',
+    reflectionId: '',
+    loadedFor: null,
+  };
+  state.draft = draft;
+
+  const fileOpts = state.files
+    .map(f => `<option value="${esc(f.path)}" ${f.path === draft.targetPath ? 'selected' : ''}>${esc(f.label)} (${esc(f.path)})</option>`)
+    .join('');
+
+  return `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <div style="font-size:18px;font-weight:600;">New canon-document proposal</div>
+      <button class="btn" id="cancelDraft">Cancel</button>
+    </div>
+    <div class="form-row">
+      <label>Target file</label>
+      <select id="docTargetPath">${fileOpts}</select>
+    </div>
+    <div class="form-row">
+      <label>Title</label>
+      <input id="docTitle" value="${esc(draft.title)}" placeholder="Short imperative title (e.g. &quot;Tighten epistemics on speculation&quot;)" />
+    </div>
+    <div class="form-row">
+      <label>Rationale</label>
+      <textarea id="docRationale" placeholder="Why this change?">${esc(draft.rationale)}</textarea>
+    </div>
+    <div class="form-row">
+      <label>Provenance source</label>
+      <select id="docProvSource">
+        <option value="manual" ${draft.provenanceSource==='manual'?'selected':''}>manual</option>
+        <option value="inquiry_turn" ${draft.provenanceSource==='inquiry_turn'?'selected':''}>inquiry_turn</option>
+        <option value="memory_item" ${draft.provenanceSource==='memory_item'?'selected':''}>memory_item</option>
+        <option value="reflection_output" ${draft.provenanceSource==='reflection_output'?'selected':''}>reflection_output</option>
+      </select>
+    </div>
+    <div class="form-row" id="provFields"></div>
+    <div class="form-row">
+      <label>Edited file content</label>
+      <button class="btn" id="loadCurrentBtn" style="margin-bottom:8px;">Load current content into editor</button>
+      <textarea id="docAfter" style="min-height:340px;">${esc(draft.afterContent)}</textarea>
+      <div class="hint">The current file content is captured as <code>beforeContent</code> when you submit; the diff is computed from there.</div>
+    </div>
+    <div class="toolbar">
+      <button class="btn btn-primary" id="submitDocBtn">Create pending proposal</button>
+    </div>
+  `;
+}
+
+function renderProvenanceFields() {
+  const draft = state.draft;
+  const root = $('#provFields');
+  if (!root) return;
+  const inputs = [];
+  if (draft.provenanceSource === 'inquiry_turn') {
+    inputs.push(`<label>Session ID</label><input id="provSessionId" value="${esc(draft.sessionId)}" />`);
+    inputs.push(`<label style="margin-top:8px;">Turn ID</label><input id="provTurnId" value="${esc(draft.turnId)}" />`);
+  } else if (draft.provenanceSource === 'memory_item') {
+    inputs.push(`<label>Memory ID</label><input id="provMemoryId" value="${esc(draft.memoryId)}" />`);
+  } else if (draft.provenanceSource === 'reflection_output') {
+    inputs.push(`<label>Reflection ID</label><input id="provReflectionId" value="${esc(draft.reflectionId)}" />`);
+  }
+  inputs.push(`<label style="margin-top:8px;">Note (optional)</label><input id="provNote" value="${esc(draft.provenanceNote)}" />`);
+  root.innerHTML = inputs.join('');
+}
+
+function bindDocEditor() {
+  $('#cancelDraft').addEventListener('click', () => {
+    state.draftMode = null;
+    state.draft = null;
+    renderDetail();
+  });
+  $('#docTargetPath').addEventListener('change', e => {
+    state.draft.targetPath = e.target.value;
+    state.draft.loadedFor = null;
+  });
+  $('#docTitle').addEventListener('input', e => state.draft.title = e.target.value);
+  $('#docRationale').addEventListener('input', e => state.draft.rationale = e.target.value);
+  $('#docAfter').addEventListener('input', e => state.draft.afterContent = e.target.value);
+  $('#docProvSource').addEventListener('change', e => {
+    state.draft.provenanceSource = e.target.value;
+    renderProvenanceFields();
+    bindProvenanceFields();
+  });
+  renderProvenanceFields();
+  bindProvenanceFields();
+  $('#loadCurrentBtn').addEventListener('click', loadCurrentDocContent);
+  $('#submitDocBtn').addEventListener('click', submitDocProposal);
+}
+
+function bindProvenanceFields() {
+  const map = {
+    provSessionId: 'sessionId',
+    provTurnId: 'turnId',
+    provMemoryId: 'memoryId',
+    provReflectionId: 'reflectionId',
+    provNote: 'provenanceNote',
+  };
+  Object.entries(map).forEach(([id, key]) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', e => { state.draft[key] = e.target.value; });
+  });
+}
+
+async function loadCurrentDocContent() {
+  try {
+    const file = await api(`/api/canon/files/${encodeURIComponent(state.draft.targetPath)}`);
+    state.draft.afterContent = file.content;
+    state.draft.loadedFor = state.draft.targetPath;
+    $('#docAfter').value = file.content;
+    toast('Loaded current content.', 'success');
+  } catch (err) {
+    toast(err.message, 'error');
+  }
+}
+
+async function submitDocProposal() {
+  const draft = state.draft;
+  if (!draft.title.trim() || !draft.rationale.trim() || !draft.afterContent) {
+    toast('Title, rationale, and edited content are all required.', 'error');
+    return;
+  }
+  try {
+    const created = await api('/api/canon/proposals', {
+      method: 'POST',
+      body: JSON.stringify({
+        title: draft.title,
+        targetPath: draft.targetPath,
+        changeKind: 'modify',
+        afterContent: draft.afterContent,
+        rationale: draft.rationale,
+        provenance: {
+          source: draft.provenanceSource,
+          sessionId: draft.sessionId || undefined,
+          turnId: draft.turnId || undefined,
+          memoryId: draft.memoryId || undefined,
+          reflectionId: draft.reflectionId || undefined,
+          note: draft.provenanceNote || undefined,
+        },
+      }),
+    });
+    toast('Pending proposal created.', 'success');
+    state.draftMode = null;
+    state.draft = null;
+    state.selectedId = created.id;
+    state.activeTab = 'diff';
+    await loadProposals();
+    await renderDetail();
+  } catch (err) {
+    toast(err.message, 'error');
+  }
+}
+
+// ── Continuity-fact drafter ─────────────────────────────────────────────────
+function renderFactDrafter() {
+  const draft = state.draft || {
+    factId: '',
+    statement: '',
+    category: 'project-history',
+    status: 'active',
+    source: '',
+    rationale: '',
+    title: '',
+    provenanceSource: 'manual',
+    provenanceNote: '',
+    sessionId: '',
+    turnId: '',
+    memoryId: '',
+    reflectionId: '',
+  };
+  state.draft = draft;
+
+  return `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <div style="font-size:18px;font-weight:600;">New continuity fact</div>
+      <button class="btn" id="cancelDraft">Cancel</button>
+    </div>
+    <div class="form-row">
+      <label>Fact ID</label>
+      <input id="factId" value="${esc(draft.factId)}" placeholder="leave blank to auto-assign next CF-NNN" />
+      <div class="hint"><a href="#" id="autoIdLink">Use next available ID</a></div>
+    </div>
+    <div class="form-row">
+      <label>Statement</label>
+      <textarea id="factStatement" placeholder="Atomic fact (one sentence preferred).">${esc(draft.statement)}</textarea>
+    </div>
+    <div class="form-row">
+      <label>Category</label>
+      <select id="factCategory">
+        ${['project-history','project-decision','identity','canon-governance','active-governance','architecture','epistemics']
+          .map(c => `<option value="${c}" ${draft.category===c?'selected':''}>${c}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-row">
+      <label>Status</label>
+      <input id="factStatus" value="${esc(draft.status)}" />
+    </div>
+    <div class="form-row">
+      <label>Source citation (optional)</label>
+      <input id="factSource" value="${esc(draft.source)}" />
+    </div>
+    <div class="form-row">
+      <label>Title (optional)</label>
+      <input id="factTitle" value="${esc(draft.title)}" placeholder="defaults to &quot;Add continuity fact CF-NNN&quot;" />
+    </div>
+    <div class="form-row">
+      <label>Rationale</label>
+      <textarea id="factRationale" placeholder="Why does this belong in canon?">${esc(draft.rationale)}</textarea>
+    </div>
+    <div class="form-row">
+      <label>Provenance source</label>
+      <select id="docProvSource">
+        <option value="manual" ${draft.provenanceSource==='manual'?'selected':''}>manual</option>
+        <option value="inquiry_turn" ${draft.provenanceSource==='inquiry_turn'?'selected':''}>inquiry_turn</option>
+        <option value="memory_item" ${draft.provenanceSource==='memory_item'?'selected':''}>memory_item</option>
+        <option value="reflection_output" ${draft.provenanceSource==='reflection_output'?'selected':''}>reflection_output</option>
+      </select>
+    </div>
+    <div class="form-row" id="provFields"></div>
+    <div class="toolbar">
+      <button class="btn btn-primary" id="submitFactBtn">Create pending proposal</button>
+    </div>
+  `;
+}
+
+function bindFactDrafter() {
+  $('#cancelDraft').addEventListener('click', () => {
+    state.draftMode = null;
+    state.draft = null;
+    renderDetail();
+  });
+  const map = {
+    factId: 'factId',
+    factStatement: 'statement',
+    factCategory: 'category',
+    factStatus: 'status',
+    factSource: 'source',
+    factTitle: 'title',
+    factRationale: 'rationale',
+  };
+  Object.entries(map).forEach(([id, key]) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', e => { state.draft[key] = e.target.value; });
+    if (el) el.addEventListener('change', e => { state.draft[key] = e.target.value; });
+  });
+  $('#docProvSource').addEventListener('change', e => {
+    state.draft.provenanceSource = e.target.value;
+    renderProvenanceFields();
+    bindProvenanceFields();
+  });
+  renderProvenanceFields();
+  bindProvenanceFields();
+  $('#autoIdLink').addEventListener('click', async (e) => {
+    e.preventDefault();
+    try {
+      const r = await api('/api/canon/continuity-facts/next-id');
+      state.draft.factId = r.nextId;
+      $('#factId').value = r.nextId;
+      toast(`Next ID: ${r.nextId}`);
+    } catch (err) {
+      toast(err.message, 'error');
+    }
+  });
+  $('#submitFactBtn').addEventListener('click', submitFactProposal);
+}
+
+async function submitFactProposal() {
+  const draft = state.draft;
+  if (!draft.statement.trim() || !draft.rationale.trim()) {
+    toast('Statement and rationale are required.', 'error');
+    return;
+  }
+  try {
+    const created = await api('/api/canon/proposals/draft-continuity-fact', {
+      method: 'POST',
+      body: JSON.stringify({
+        factId: draft.factId || undefined,
+        statement: draft.statement,
+        category: draft.category,
+        status: draft.status,
+        source: draft.source || undefined,
+        rationale: draft.rationale,
+        title: draft.title || undefined,
+        provenance: {
+          source: draft.provenanceSource,
+          sessionId: draft.sessionId || undefined,
+          turnId: draft.turnId || undefined,
+          memoryId: draft.memoryId || undefined,
+          reflectionId: draft.reflectionId || undefined,
+          note: draft.provenanceNote || undefined,
+        },
+      }),
+    });
+    toast('Continuity-fact proposal created.', 'success');
+    state.draftMode = null;
+    state.draft = null;
+    state.selectedId = created.id;
+    state.activeTab = 'diff';
+    await loadProposals();
+    await renderDetail();
+  } catch (err) {
+    toast(err.message, 'error');
+  }
+}
+
+// ── Wiring ──────────────────────────────────────────────────────────────────
+$('#filterStatus').addEventListener('change', loadProposals);
+$('#filterSource').addEventListener('change', loadProposals);
+$('#newDocBtn').addEventListener('click', () => {
+  state.selectedId = null;
+  state.draftMode = 'doc';
+  state.draft = null;
+  renderList();
+  renderDetail();
+});
+$('#newFactBtn').addEventListener('click', () => {
+  state.selectedId = null;
+  state.draftMode = 'fact';
+  state.draft = null;
+  renderList();
+  renderDetail();
+});
+
+(async () => {
+  try {
+    await loadFiles();
+    await loadProposals();
+  } catch (err) {
+    toast(err.message, 'error');
+  }
+})();
+</script>
+</body>
+</html>

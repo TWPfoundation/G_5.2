@@ -13,7 +13,7 @@
 | **Memory** | `packages/orchestration/` (memory module) | Implemented v1 | Selective durable memory with global/session scope, confirmation-based dedupe, operator delete. v2 discipline is tracked under M3. |
 | **Dashboard / Operator surface** | `apps/dashboard/` | Implemented | Report viewer, diff UI, inquiry inspection (session search, turn drawer, retrieved-context drawer), memory inspection and delete. |
 | **Inquiry surface** | `apps/dashboard/` (`/inquiry.html`) | Implemented v1 | Minimal operator-grade inquiry UI backed by persisted sessions. v1.5 expansion is tracked under M2. |
-| **Editorial workflow** | *not yet on disk* | Planned (M4) | Canon / continuity-fact proposal → review → promotion flow. No code today. |
+| **Editorial workflow** | `packages/orchestration/src/canon-proposals/`, `apps/dashboard/src/server.ts` (`/api/canon/...`), `apps/dashboard/public/editorial.html`, `data/canon-proposals/` | Implemented (M4) | First-class canon-change workflow: proposals against an allowlisted set of canon files (constitution, axioms, epistemics, constraints, voice, interaction-modes, worldview, anti-patterns, continuity-facts, glossary, manifest), continuity-fact YAML drafter with auto-assigned `CF-NNN` ids, line-level diff, `pending → accepted / rejected / needs_revision` state machine, reviewer notes + rationale + provenance, and changelog auto-scaffolding under `packages/canon/changelog/` on accept. |
 | **Reflection workflow** | *not yet on disk* | Planned (M5) | Authored-artifact generation loop (draft → critique → revise) with explicit promotion path into canon. No code today. |
 | **Operator studio integration** | *not yet on disk* | Planned (M7) | Unified studio bringing inquiry, editorial, reflection, memory, and eval surfaces into one operator experience. |
 
@@ -41,7 +41,7 @@ G_5.2/
 └─ g_52_project_overview_and_roadmap.md   ✓ exists
 ```
 
-No separate `packages/persistence`, `packages/memory`, `packages/editorial`, or `packages/reflection` packages exist yet. Persistence and memory live inside `packages/orchestration/`. The editorial and reflection subsystems are roadmap items with no code yet; they must not be referred to as present capabilities in user-facing docs.
+No separate `packages/persistence`, `packages/memory`, `packages/editorial`, or `packages/reflection` packages exist yet. Persistence, memory, and the editorial canon-proposal subsystem all live inside `packages/orchestration/` (see `src/canon-proposals/` for M4). The reflection subsystem remains a roadmap item with no code yet and must not be referred to as a present capability in user-facing docs.
 
 ## Naming rules
 
