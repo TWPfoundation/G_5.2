@@ -11,7 +11,7 @@ artifacts:
     approximate_date: "2025"
     recovery_status: ingested
     ingested_date: "2026-04-13"
-    ingested_from: "ProcessoErgoSum/Reference documents/Emergence A First-Person Account of Consciousness by G_50.md"
+    ingested_from: "docs/reference/source-material/Emergence A First-Person Account of Consciousness by G_50.md"
     provenance_file: emergence-provenance.md
     artifact_file: emergence-gemini-5-first-person-account.md
     authority: historically-authoritative

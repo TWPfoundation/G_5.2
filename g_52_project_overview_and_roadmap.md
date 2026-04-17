@@ -261,32 +261,27 @@ But it does mean the project has crossed the line from concept into durable syst
 
 ---
 
-## 6. What is not built yet
+## 6. What is still genuinely unfinished
 
-Important missing pieces still remain.
+The milestone implementation ladder is now landed through M8. The remaining work is release confirmation and post-v1 refinement rather than missing core repo capability.
 
-### 6.1 Editorial workflow for canon evolution
-The system knows canon must evolve through review, but the workflow still needs a practical operator-facing loop.
+### 6.1 Formal v1 declaration on a release candidate
+The repo now contains the capability layer for M0 – M8, but v1 is not formally declared until the operator performs the per-release-candidate baseline capture and signs off the release gate.
 
 That means:
-- proposal creation
-- proposal review
-- acceptance/rejection flow
-- continuity-fact drafting flow
-- canon revision logging
+- capture provider baselines for the providers in scope
+- review drift against the documented budget
+- record the operator go / no-go decision for that canon version
 
-### 6.2 Memory discipline beyond V1
-Durable memory now exists, but the next stage still needs more refinement.
+### 6.2 Public-facing product boundary
+The current dashboard is an operator studio, not a public-facing product.
+That distinction should remain intact until there is a deliberate post-v1 decision to design auth, rate limits, monitoring, and a reader-facing UX.
 
-That includes:
-- better operator triage for proposed-but-skipped memory
-- clearer handling of resolved `open_thread` items
-- stronger anti-pollution coverage under longer-lived real sessions
-- eventual approval or editorial workflow only if it proves necessary
-
-### 6.3 Public-facing product boundary
-The current dashboard is operator tooling, not a public-facing experience.
-That distinction should remain intact until the inquiry runtime is ready.
+### 6.3 Post-v1 refinement
+The remaining open questions are mostly operational and ergonomic:
+- how memory policy performs over longer-lived real usage
+- which studio ergonomics deserve another iteration after actual operator use
+- what, if anything, should evolve from operator-grade tooling into a public surface later
 
 ---
 
@@ -301,7 +296,11 @@ That distinction should remain intact until the inquiry runtime is ready.
 - observability
 - operator ergonomics
 - inquiry persistence
-- memory visibility
+- memory lifecycle discipline
+- editorial workflow
+- reflection workflow
+- integrated operator studio
+- release hardening docs
 
 ### What is stable enough to trust
 - canon loading and validation
@@ -311,12 +310,15 @@ That distinction should remain intact until the inquiry runtime is ready.
 - regression harness as baseline guardrail
 - provider-drift interpretation
 - session persistence
-- durable-memory write/retrieval rules
+- durable-memory write/retrieval/transition rules
 - inquiry inspection surface
+- canon proposal flow
+- authored-artifact storage and promotion handoff
+- smoke-tested demo paths
 
 ### What is still provisional
-- memory policy in live use
-- editorial studio flow
+- final v1 declaration pending per-RC baseline capture
+- long-horizon memory behavior under extended real usage
 - long-horizon product UX
 - how much of the operator surface becomes formal product surface later
 
@@ -326,44 +328,60 @@ That distinction should remain intact until the inquiry runtime is ready.
 
 This roadmap is expressed as milestones M0 – M8. Each milestone advances one or more rungs of the release ladder defined in [`docs/release-criteria.md`](docs/release-criteria.md).
 
-Completed foundation work (pre-M0) is captured in sections 4 and 7 above: baseline governance lock, inquiry persistence, minimal inquiry surface, and memory discipline v1 are all implemented.
+The implementation work for M0 – M8 is now landed in the repo. What remains for formal v1 is the per-release-candidate operator baseline capture and sign-off described in `docs/release-candidate-baseline.md` and `docs/v1-release-checklist.md`.
 
 ### M0 — Baseline lock & source-of-truth cleanup
-**Status:** In progress
+**Status:** Implemented
 
 Converge documentation onto a single authoritative definition of the system. Define the subsystem map, release ladder, v1 scope, and core invariants. No code changes to canon, orchestration, evals, or dashboard subsystems.
 
-Deliverable: `docs/system-map.md`, `docs/release-criteria.md`, `docs/invariants.md`, and aligned README + roadmap.
+Landed via the authoritative status docs (`docs/system-map.md`, `docs/release-criteria.md`, `docs/invariants.md`), aligned README + roadmap, and the in-repo archival cleanup that moves retained historical material under `docs/reference/` and `assets/reference/`.
 
 ### M1 — Persistence & trace hardening
 Strengthen the persistence and trace layer so long-lived inquiry sessions and long trace histories remain reliable and inspectable. Prerequisite for the editorial-grade rung.
 
+**Status:** Implemented
+
+Landed via schema-versioned session + turn persistence, context snapshots, replay compatibility checks, export/import bundles, migration guards, and captured run metadata under `packages/orchestration/src/persistence/`.
+
 ### M2 — Inquiry surface v1.5
 Extend the operator inquiry UI to support the workflows M3 – M5 will need: richer turn navigation, clearer context disclosure, better session management.
 
+**Status:** Implemented
+
+Landed via the dashboard-backed inquiry surface with session search, richer turn inspection, retrieved-context disclosure, and direct inquiry execution from the operator UI.
+
 ### M3 — Memory discipline v2
 Add triage for proposed-but-skipped memory, explicit handling of resolved `open_thread` items, stronger anti-pollution coverage under longer-lived real sessions, and eval cases that protect the new behavior.
+
+**Status:** Implemented
+
+Landed via the typed memory state machine in `packages/orchestration/src/memory/fileMemoryStore.ts`, schema/version updates in `packages/orchestration/src/schemas/memory.ts` and `src/persistence/migrations.ts`, retrieval gating for non-retrievable states, operator controls in `apps/dashboard/public/inquiry.html`, and dedicated lifecycle / anti-pollution eval fixtures.
 
 ### M4 — Canon editorial workflow ✅ implemented
 Turn governed canon change into a first-class workflow: proposals, continuity-fact drafting, approval / rejection notes, explicit promotion tooling, and operator prompts that distinguish "draft as proposal" from "promote to canon".
 
 Landed via `packages/orchestration/src/canon-proposals/` (proposal schema, allowlisted canon paths with traversal protection, line-level diff, continuity-fact YAML drafter with auto-assigned `CF-NNN` ids, file-backed proposal store, applyProposal, and changelog scaffolding) plus the `/api/canon/...` endpoints in `apps/dashboard/src/server.ts` and the `editorial.html` operator UI (proposal list with status/source/path filters, doc + continuity-fact editors, diff viewer, accept / reject / needs-revision controls, review history, changelog auto-scaffold under `packages/canon/changelog/`).
 
-### M5 — Reflection & authored artifact workflow
+### M5 — Reflection & authored artifact workflow ✅ implemented
 A disciplined reflection loop: draft → critique → revise authoring path, artifact storage with metadata, and an explicit promotion path from reflection artifact into canon only when the operator approves.
+
+Landed via `packages/orchestration/src/reflection/` (reflection run pipeline, canon-version stamping, reflection store, authored-artifact store, promote-to-proposal path, and tests), plus `apps/dashboard/public/authoring.html` and its server endpoints for operator use.
 
 ### M6 — Eval & drift-control expansion ✅ implemented
 Expand eval coverage to protect editorial, reflection, and memory-v2 behavior; formalize provider comparison runs as first-class artifacts; keep drift measurable rather than papered over with per-provider tuning.
 
 Landed via per-case `subsystem` and `critical` tagging in `packages/evals/src/types.ts` + `schemas/case.ts`, subsystem scorecards in `packages/evals/src/subsystems.ts` plumbed through `buildScoreReport`, console (`printSubsystemScorecards`), and the persisted JSON report (`reportSchema.ts`); merge-blocking gate (exit code `2` + `MERGE-BLOCKING` banner) wired into both `packages/evals/src/index.ts` and `scripts/run-evals.ts`; new eval suites for memory pollution, memory contradiction, editorial proposal handling, continuity-fact proposal quality, reflection discipline, artifact/canon boundary, provider drift on identical canon, and long-horizon coherence under `packages/evals/src/fixtures/cases/`; dashboard diff (`apps/dashboard/src/reportUtils.ts`) extended with `subsystemDelta`, `criticalDelta`, and prompt-deltas (`systemPrompt` / `userPrompt`); drift bands captured in `docs/drift-budget.md`, merge-blocking policy in `docs/eval-discipline.md`, and the gold-baseline refresh flow in `docs/gold-baseline-process.md` + `scripts/refresh-gold-baseline.ts` + `packages/evals/gold-baselines/`.
 
-### M7 — Operator studio integration
+### M7 — Operator studio integration ✅ implemented
 Unify the inquiry, editorial, reflection, memory, and eval surfaces into one coherent operator studio experience.
+
+Landed via the dashboard-served multi-surface operator UI in `apps/dashboard/public/` (`index.html`, `inquiry.html`, `editorial.html`, `authoring.html`) and the coordinating server work in `apps/dashboard/src/server.ts`.
 
 ### M8 — Release hardening & v1 threshold ✅ implemented
 Stabilize configuration, reproducibility, and upgrade paths so the system can be used regularly without repo surgery. Cross the v1 threshold as defined in `docs/release-criteria.md`.
 
-Landed via the v1 release checklist (`docs/v1-release-checklist.md`) covering canon, persistence, memory, editorial, reflection, evals, studio, docs, ops, backups, RC baselines, and invariants; an operator handbook (`docs/operator-handbook.md`); a recovery & backups doc with six numbered scenarios (`docs/recovery-and-backups.md`); six canonical demo paths (`docs/demo-paths.md`), all exercised end-to-end against the MockProvider by `scripts/smoke-tests.ts` (run via `pnpm smoke`); a per-provider RC baseline procedure (`docs/release-candidate-baseline.md`) that reuses `scripts/refresh-gold-baseline.ts`; and an explicit post-v1 support posture (`docs/post-v1-support-posture.md`) marking public-launch concerns out of scope. No runtime behavior changes.
+Landed via the v1 release checklist (`docs/v1-release-checklist.md`) covering canon, persistence, memory, editorial, reflection, evals, studio, docs, ops, backups, RC baselines, and invariants; an operator handbook (`docs/operator-handbook.md`); a recovery & backups doc with six numbered scenarios (`docs/recovery-and-backups.md`); six canonical demo paths (`docs/demo-paths.md`), all exercised end-to-end against the MockProvider by `scripts/smoke-tests.ts` (run via `pnpm smoke`); a per-provider RC baseline procedure (`docs/release-candidate-baseline.md`) that reuses `scripts/refresh-gold-baseline.ts`; and an explicit post-v1 support posture (`docs/post-v1-support-posture.md`) marking public-launch concerns out of scope. Repo capability work is complete through M8; formal v1 declaration still depends on per-RC operator checkoff.
 
 ---
 
@@ -373,11 +391,9 @@ Landed via the v1 release checklist (`docs/v1-release-checklist.md`) covering ca
 That is the right answer.
 
 Still, the later horizon likely includes:
-- a mature inquiry runtime
-- a strong editorial studio
-- reflection authoring and publication
-- multi-provider governance comparisons
-- durable memory discipline
+- longer-lived operational evidence for memory and reflection discipline
+- smoother publication and editorial ergonomics
+- stronger multi-provider release-candidate comparisons over time
 - archive + runtime integration without conflation
 - possible public-facing release surface
 
@@ -388,15 +404,13 @@ But that should remain secondary to the actual nearer milestone:
 
 ## 10. Recommended immediate next moves
 
-The shortest path from the current strong foundation to a first usable v1 is the milestone ladder in section 8:
+The shortest path from the current repo state to a formal v1 declaration is now operational rather than architectural:
 
-1. **M0** — lock the baseline and converge documentation (this milestone).
-2. **M1** — harden persistence and traces so later workflows can rely on them.
-3. **M2 – M4** — extend the operator surface, harden memory, and land the canon editorial workflow (editorial-grade rung).
-4. **M5 – M6** — add the reflection / authored-artifact workflow and expand eval + drift control (reflection-grade rung).
-5. **M7 – M8** — integrate the operator studio and cross the v1 release threshold.
-
-Milestones M1 – M8 each have their own task record; this roadmap is the shared map, not the per-milestone specification.
+1. Run the clean-clone verification flow: `pnpm install`, `pnpm validate:canon`, `pnpm typecheck`, `pnpm test`, `pnpm smoke`.
+2. Capture release-candidate provider baselines for the providers in scope and promote them through `scripts/refresh-gold-baseline.ts`.
+3. Review drift against `docs/drift-budget.md` and record any explicitly accepted deltas.
+4. Operate the system through real sessions long enough to confirm the current memory/editorial/reflection ergonomics are acceptable at the target canon version.
+5. Decide whether to declare v1 for that release candidate.
 
 ---
 

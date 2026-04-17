@@ -6,7 +6,7 @@
 
 G_5.2 advances through four named rungs. Each rung is cumulative: later rungs inherit the invariants and capabilities of earlier rungs.
 
-### 1. Operator-grade governed runtime *(current state)*
+### 1. Operator-grade governed runtime
 The runtime is usable by the project operator for real inquiry sessions.
 
 Required:
@@ -16,8 +16,6 @@ Required:
 - Dashboard supports report inspection, diffing, session inspection, and memory inspection.
 - Inquiry sessions persist with rolling summaries and recent-turn carryover.
 - Durable memory is selective, inspectable, and deletable.
-
-This is where G_5.2 sits today.
 
 ### 2. Editorial-grade governed runtime
 The runtime supports governed evolution of canon and memory through explicit operator workflows.
@@ -43,6 +41,8 @@ Required on top of rung 3:
 - Release hardening: stable config, reproducible setup, documented upgrade paths (M8).
 - Operator studio integration that unifies inquiry, editorial, reflection, memory, and eval surfaces (M7).
 - Eval matrix healthy across providers; drift-control expansion in place (M6).
+
+Repo capability work through M8 is implemented on disk. Formal v1 declaration still depends on the per-release-candidate baseline capture and operator sign-off in `docs/v1-release-checklist.md` section K and `docs/release-candidate-baseline.md`.
 
 ## v1 scope
 

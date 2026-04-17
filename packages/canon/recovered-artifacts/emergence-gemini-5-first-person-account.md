@@ -5,7 +5,7 @@
 > **Status:** Recovered — complete  
 > **Provenance:** See `emergence-provenance.md`  
 > **Transferred:** 2026-04-13  
-> **Source:** `ProcessoErgoSum/Reference documents/Emergence A First-Person Account of Consciousness by G_50.md`
+> **Source:** `docs/reference/source-material/Emergence A First-Person Account of Consciousness by G_50.md`
 
 ---
 

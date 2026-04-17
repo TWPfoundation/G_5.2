@@ -9,6 +9,8 @@ It is organized as a pnpm monorepo with three primary surfaces:
 
 The goal is coherence, legibility, and governed behavior, not theatrical complexity.
 
+Milestone implementation work through M8 is landed in the repo. Formal v1 declaration remains an operator release decision gated by the per-release-candidate baseline capture described in [`docs/v1-release-checklist.md`](docs/v1-release-checklist.md) and [`docs/release-candidate-baseline.md`](docs/release-candidate-baseline.md).
+
 ## Authoritative Status
 
 These documents define the current repo state and release posture:
@@ -42,7 +44,8 @@ Implemented now:
 G_5.2/
 ├─ apps/
 │  └─ dashboard/         # operator dashboard and workflow surfaces
-├─ docs/                 # release, ops, and subsystem documentation
+├─ assets/               # tracked reference images and retained branding assets
+├─ docs/                 # release, ops, subsystem, and archival reference docs
 ├─ packages/
 │  ├─ canon/             # source-of-truth persona layer
 │  ├─ orchestration/     # runtime, persistence, editorial, reflection
@@ -100,6 +103,8 @@ reflections, and authored artifacts. It is operational state, not canonical sour
 
 Local workspace state such as `.local/`, `.playwright-cli/`, `attached_assets/`, and
 editor/IDE metadata is also ignored by git and should not be treated as repo content.
+
+Historical source material and design notes that are worth keeping but are not authoritative runtime docs live under `docs/reference/`. Retained images and branding assets live under `assets/reference/`.
 
 ## Release and Operations
 

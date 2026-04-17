@@ -162,6 +162,6 @@ See `docs/recovery-and-backups.md` for:
 - Release ladder + v1 scope: `docs/release-criteria.md`
 - Invariants: `docs/invariants.md`
 - Eval discipline + drift budget: `docs/eval-discipline.md`, `docs/drift-budget.md`
-- Memory discipline (v1 + v2): `docs/Memory Discipline V1.md`, `replit.md` § "Memory discipline v2"
-- Editorial workflow: `replit.md` § "Canon editorial workflow"
+- Memory discipline (v1 + v2): `docs/Memory Discipline V1.md`, `docs/v1-release-checklist.md` § "C. Memory is governed and inspectable", `g_52_project_overview_and_roadmap.md` § "M3 — Memory discipline v2"
+- Editorial workflow: `docs/system-map.md`, `docs/v1-release-checklist.md` § "D. Canon change workflow exists and is usable"
 - Decision log: `docs/decision-log/`

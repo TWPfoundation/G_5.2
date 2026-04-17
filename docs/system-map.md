@@ -9,20 +9,21 @@
 | **Canon** | `packages/canon/` | Implemented | Source-of-truth identity layer: constitution, axioms, epistemics, constraints, voice, interaction modes, worldview, continuity facts, glossary, anti-patterns, recovered-artifacts governance, changelog. |
 | **Orchestration** | `packages/orchestration/` | Implemented | Provider-agnostic turn pipeline: active-canon retrieval, `draft → critique → revise → memory decision`, provider abstraction. |
 | **Evals** | `packages/evals/`, `docs/eval-discipline.md`, `docs/drift-budget.md`, `docs/gold-baseline-process.md`, `packages/evals/gold-baselines/` | Implemented (M6 expanded) | Regression harness, structured eval cases, trace capture, report generation, cross-provider drift coverage. M6 added subsystem tagging, per-subsystem scorecards in console + JSON report, merge-blocking critical-case gate (CLI exit `2`), prompt + per-subsystem dashboard diff, drift budget docs, and a gold-baseline refresh flow. |
-| **Persistence** | `packages/orchestration/` (session + memory stores) | Implemented (minimal, file-backed) | Inquiry session records, rolling summaries, recent-turn carryover, durable memory items. Planned hardening is tracked under M1. |
-| **Memory** | `packages/orchestration/` (memory module) | Implemented v1 | Selective durable memory with global/session scope, confirmation-based dedupe, operator delete. v2 discipline is tracked under M3. |
-| **Dashboard / Operator surface** | `apps/dashboard/` | Implemented | Report viewer, diff UI, inquiry inspection (session search, turn drawer, retrieved-context drawer), memory inspection and delete. |
-| **Inquiry surface** | `apps/dashboard/` (`/inquiry.html`) | Implemented v1 | Minimal operator-grade inquiry UI backed by persisted sessions. v1.5 expansion is tracked under M2. |
+| **Persistence** | `packages/orchestration/` (session + memory stores) | Implemented (M1, file-backed) | Inquiry session records, rolling summaries, recent-turn carryover, context snapshots, replay/export/import, and schema-versioned migrations for long-lived sessions. |
+| **Memory** | `packages/orchestration/` (memory module) | Implemented (M3) | Typed durable memory with global/session scope, explicit lifecycle states, conflict checks, `open_thread` resolution, operator transitions, and anti-pollution eval coverage. |
+| **Dashboard / Operator surface** | `apps/dashboard/` | Implemented (M7 integrated) | Report viewer, diff UI, inquiry inspection (session search, turn drawer, retrieved-context drawer), memory inspection and lifecycle controls, plus links into editorial and authoring surfaces. |
+| **Inquiry surface** | `apps/dashboard/` (`/inquiry.html`) | Implemented (M2) | Operator-grade inquiry UI with session search, richer turn navigation, retrieved-context disclosure, and live turn execution backed by persisted sessions. |
 | **Editorial workflow** | `packages/orchestration/src/canon-proposals/`, `apps/dashboard/src/server.ts` (`/api/canon/...`), `apps/dashboard/public/editorial.html`, `data/canon-proposals/` | Implemented (M4) | First-class canon-change workflow: proposals against an allowlisted set of canon files (constitution, axioms, epistemics, constraints, voice, interaction-modes, worldview, anti-patterns, continuity-facts, glossary, manifest), continuity-fact YAML drafter with auto-assigned `CF-NNN` ids, line-level diff, `pending → accepted / rejected / needs_revision` state machine, reviewer notes + rationale + provenance, and changelog auto-scaffolding under `packages/canon/changelog/` on accept. |
 | **Reflection workflow** | `packages/orchestration/src/reflection/`, `apps/dashboard/public/authoring.html`, `data/reflection/`, `data/authored-artifacts/` | Implemented (M5) | Authored-artifact loop (draft → critique → revise → operator-approve → store) with provenance metadata and a promote-to-canon-proposal hand-off that still routes through the editorial review path. |
-| **Operator studio integration** | *not yet on disk* | Planned (M7) | Unified studio bringing inquiry, editorial, reflection, memory, and eval surfaces into one operator experience. |
-| **Release hardening & v1 threshold** | `docs/v1-release-checklist.md`, `docs/operator-handbook.md`, `docs/recovery-and-backups.md`, `docs/demo-paths.md`, `docs/release-candidate-baseline.md`, `docs/post-v1-support-posture.md`, `scripts/smoke-tests.ts` | Implemented (M8) | First true v1 release gate: written release checklist, operator handbook, recovery & backups doc, six canonical demo paths exercised end-to-end via `pnpm smoke` against the MockProvider, RC baseline procedure per provider, and an explicit post-v1 support posture. No runtime behavior changes. |
+| **Operator studio integration** | `apps/dashboard/public/index.html`, `apps/dashboard/public/inquiry.html`, `apps/dashboard/public/editorial.html`, `apps/dashboard/public/authoring.html`, `apps/dashboard/src/server.ts` | Implemented (M7) | Unified operator surface bringing inquiry, editorial, reflection, memory, and eval workflows into one coherent dashboard-served experience. |
+| **Release hardening & v1 threshold** | `docs/v1-release-checklist.md`, `docs/operator-handbook.md`, `docs/recovery-and-backups.md`, `docs/demo-paths.md`, `docs/release-candidate-baseline.md`, `docs/post-v1-support-posture.md`, `scripts/smoke-tests.ts` | Implemented (M8 capability layer) | Release gate docs, operator handbook, recovery/backups guidance, demo-path smoke coverage, RC baseline procedure, and post-v1 support posture. Formal v1 declaration still depends on per-RC baseline capture and operator sign-off. |
 
 ## Scripts and supporting layout
 
 - `scripts/run-evals.ts` — eval runner entry point.
 - `scripts/validate-canon.ts` — canon boundary validation.
-- `docs/` — authoritative project documentation (this file, `release-criteria.md`, `invariants.md`, `product-brief.md`, `LINEAGE_AND_BOUNDARIES.md`, `Memory Discipline V1.md`, `decision-log/`).
+- `docs/` — authoritative project documentation plus retained archival references under `docs/reference/`.
+- `assets/reference/` — tracked retained images and branding assets.
 - `AGENTS.md` — agent-role and pipeline rules.
 
 ## Repo structure reality check
@@ -42,7 +43,7 @@ G_5.2/
 └─ g_52_project_overview_and_roadmap.md   ✓ exists
 ```
 
-No separate `packages/persistence`, `packages/memory`, `packages/editorial`, or `packages/reflection` packages exist yet. Persistence, memory, and the editorial canon-proposal subsystem all live inside `packages/orchestration/` (see `src/canon-proposals/` for M4). The reflection subsystem remains a roadmap item with no code yet and must not be referred to as a present capability in user-facing docs.
+No separate `packages/persistence`, `packages/memory`, `packages/editorial`, or `packages/reflection` packages exist. Persistence, memory, editorial, and reflection all live inside `packages/orchestration/`, while the integrated operator surfaces live in `apps/dashboard/`.
 
 ## Naming rules
 
