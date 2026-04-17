@@ -1,4 +1,4 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
-npm install --prefer-offline 2>/dev/null || npm install
+pnpm install --prefer-offline

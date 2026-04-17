@@ -18,6 +18,15 @@ build/
 # Turbo
 .turbo/
 
+# Local workspace / IDE state
+.local/
+.agents/
+.config/
+.playwright-cli/
+attached_assets/
+.replit
+replit.md
+
 # Editor
 .vscode/
 .idea/
@@ -40,7 +49,5 @@ coverage/
 # Eval reports (local comparison artifacts — do not commit)
 packages/evals/reports/
 
-# Runtime inquiry sessions
-data/inquiry-sessions/
-data/memory-items/
-
+# Runtime data (operator-managed, not canonical repo content)
+data/

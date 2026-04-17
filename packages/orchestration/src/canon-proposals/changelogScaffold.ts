@@ -3,6 +3,10 @@ import { mkdir, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { CanonProposal } from "./proposalSchema";
 
+function toPosixPath(value: string): string {
+  return value.split(path.sep).join("/");
+}
+
 function slugify(value: string): string {
   return value
     .toLowerCase()
@@ -118,7 +122,7 @@ export async function scaffoldChangelogEntry(
 
   return {
     filePath,
-    relPath: path.relative(canonRoot, filePath),
+    relPath: toPosixPath(path.relative(canonRoot, filePath)),
     content,
   };
 }

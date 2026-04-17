@@ -22,6 +22,10 @@ import {
   type CanonProposal,
 } from "./index";
 
+function toPosixPath(value: string): string {
+  return value.replace(/\\/g, "/");
+}
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, "../../../..");
@@ -122,9 +126,9 @@ test("isEditableCanonFile allowlists only known canon files", () => {
 });
 
 test("resolveCanonPath rejects path traversal", () => {
-  const root = "/tmp/canon-root";
+  const root = path.join(os.tmpdir(), "canon-root");
   assert.throws(() => resolveCanonPath(root, "../escape.md"));
-  assert.throws(() => resolveCanonPath(root, "/abs.md"));
+  assert.throws(() => resolveCanonPath(root, path.resolve(root, "abs.md")));
   const ok = resolveCanonPath(root, "axioms.md");
   assert.equal(ok, path.join(root, "axioms.md"));
 });
@@ -214,7 +218,7 @@ test("applyProposal writes afterContent and scaffoldChangelogEntry creates a seq
     const scaffold = await scaffoldChangelogEntry(canonRoot, proposal, {
       now: "2026-04-16T00:00:00.000Z",
     });
-    assert.match(scaffold.relPath, /^changelog\/0001-/);
+    assert.match(toPosixPath(scaffold.relPath), /^changelog\/0001-/);
     const entry = await readFile(scaffold.filePath, "utf8");
     assert.match(entry, /Add editorial test marker/);
     assert.match(entry, /Status:\*\* Accepted/);
@@ -222,7 +226,7 @@ test("applyProposal writes afterContent and scaffoldChangelogEntry creates a seq
 
     // A second proposal should advance the index.
     const scaffold2 = await scaffoldChangelogEntry(canonRoot, proposal);
-    assert.match(scaffold2.relPath, /^changelog\/0002-/);
+    assert.match(toPosixPath(scaffold2.relPath), /^changelog\/0002-/);
   } finally {
     await rm(canonRoot, { recursive: true, force: true });
   }
