@@ -41,6 +41,7 @@ export interface PersistWitnessTurnArtifactsInput {
   session: InquirySession;
   persistedTurn: SessionTurnRecord;
   sessionStore?: Pick<FileSessionStore, "save">;
+  logger?: WitnessCompensationLogger;
 }
 
 export interface PersistWitnessTurnArtifactsResult {
@@ -48,11 +49,43 @@ export interface PersistWitnessTurnArtifactsResult {
   testimonyId: string;
 }
 
+export interface WitnessCompensationEvent {
+  event: "witness_persistence_compensation";
+  reason: "testimony_append_failed" | "session_save_failed";
+  action: "delete_created_testimony" | "restore_existing_testimony";
+  status: "succeeded" | "failed";
+  witnessId: string;
+  sessionId: string;
+  testimonyId?: string;
+  error: string;
+  compensationError?: string;
+}
+
+export type WitnessCompensationLogger = (
+  event: WitnessCompensationEvent
+) => void | Promise<void>;
+
+async function emitWitnessCompensationEvent(
+  logger: WitnessCompensationLogger,
+  event: WitnessCompensationEvent
+) {
+  try {
+    await logger(event);
+  } catch {
+    // Logging must not interfere with persistence compensation.
+  }
+}
+
+function defaultWitnessCompensationLogger(event: WitnessCompensationEvent) {
+  console.warn(JSON.stringify(event));
+}
+
 export async function persistWitnessTurnArtifacts(
   input: PersistWitnessTurnArtifactsInput
 ): Promise<PersistWitnessTurnArtifactsResult> {
   const sessionStore =
     input.sessionStore ?? new FileSessionStore(input.sessionRoot);
+  const logger = input.logger ?? defaultWitnessCompensationLogger;
   const stampedSession: InquirySession = {
     ...input.session,
     productId: "witness",
@@ -66,16 +99,88 @@ export async function persistWitnessTurnArtifacts(
   );
 
   const rollbackTestimony = async (
+    reason: WitnessCompensationEvent["reason"],
     createdTestimonyId: string | null,
-    previousRecord: typeof existing
+    previousRecord: typeof existing,
+    error: unknown
   ) => {
-    if (previousRecord) {
-      await input.testimonyStore.save(previousRecord);
+    const action = previousRecord
+      ? "restore_existing_testimony"
+      : createdTestimonyId
+        ? "delete_created_testimony"
+        : null;
+
+    if (!action) {
       return;
     }
 
-    if (createdTestimonyId) {
+    const testimonyId = previousRecord?.id ?? createdTestimonyId ?? undefined;
+
+    if (previousRecord) {
+      try {
+        await input.testimonyStore.save(previousRecord);
+        await emitWitnessCompensationEvent(logger, {
+          event: "witness_persistence_compensation",
+          reason,
+          action,
+          status: "succeeded",
+          witnessId: input.witnessId,
+          sessionId: stampedSession.id,
+          testimonyId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        return;
+      } catch (compensationError) {
+        await emitWitnessCompensationEvent(logger, {
+          event: "witness_persistence_compensation",
+          reason,
+          action,
+          status: "failed",
+          witnessId: input.witnessId,
+          sessionId: stampedSession.id,
+          testimonyId,
+          error: error instanceof Error ? error.message : String(error),
+          compensationError:
+            compensationError instanceof Error
+              ? compensationError.message
+              : String(compensationError),
+        });
+        throw compensationError;
+      }
+    }
+
+    if (!createdTestimonyId) {
+      return;
+    }
+
+    try {
       await input.testimonyStore.delete(createdTestimonyId);
+      await emitWitnessCompensationEvent(logger, {
+        event: "witness_persistence_compensation",
+        reason,
+        action,
+        status: "succeeded",
+        witnessId: input.witnessId,
+        sessionId: stampedSession.id,
+        testimonyId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    } catch (compensationError) {
+      await emitWitnessCompensationEvent(logger, {
+        event: "witness_persistence_compensation",
+        reason,
+        action,
+        status: "failed",
+        witnessId: input.witnessId,
+        sessionId: stampedSession.id,
+        testimonyId,
+        error: error instanceof Error ? error.message : String(error),
+        compensationError:
+          compensationError instanceof Error
+            ? compensationError.message
+            : String(compensationError),
+      });
+      throw compensationError;
     }
   };
 
@@ -101,14 +206,24 @@ export async function persistWitnessTurnArtifacts(
       createdAt: input.persistedTurn.createdAt,
     });
   } catch (error) {
-    await rollbackTestimony(createdTestimonyId, existing);
+    await rollbackTestimony(
+      "testimony_append_failed",
+      createdTestimonyId,
+      existing,
+      error
+    );
     throw error;
   }
 
   try {
     await sessionStore.save(stampedSession);
   } catch (error) {
-    await rollbackTestimony(createdTestimonyId, existing);
+    await rollbackTestimony(
+      "session_save_failed",
+      createdTestimonyId,
+      existing,
+      error
+    );
     throw error;
   }
 
