@@ -12,7 +12,7 @@ canon version.
 
 | Provider | Canon version | Prompt revision | Total cases | Pass rate | Critical failed |
 |----------|---------------|-----------------|-------------|-----------|-----------------|
-| _none captured yet — run `scripts/refresh-gold-baseline.ts` to seed_ |              |                 |             |           |                 |
+| azure | 0.1.2 | baseline-hardening-v1 | 42 | 100% | 0 |
 
 Older baselines move to `archive/` once superseded by a new release
 candidate, per the gold-baseline process doc.

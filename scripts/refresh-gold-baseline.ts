@@ -35,7 +35,12 @@ import { validateReport } from "../packages/evals/src/reporters/reportSchema";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const SUPPORTED_PROVIDERS = new Set(["anthropic", "openai", "gemini"]);
+const SUPPORTED_PROVIDERS = new Set([
+  "azure",
+  "anthropic",
+  "openai",
+  "gemini",
+]);
 
 async function main() {
   const [providerArg, reportArg] = process.argv.slice(2);

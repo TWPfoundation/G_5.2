@@ -4,6 +4,8 @@
 
 The point of this procedure is to leave behind a stored, schema-validated, critical-case-clean eval report for every provider the operator considers in scope, and to promote each into the gold baseline directory so future drift is measurable.
 
+Azure is a first-class provider in this procedure. On some release candidates it may also be the only in-scope provider if the operator is validating an Azure-first deployment posture.
+
 ## 1. Preconditions
 
 Before starting:
@@ -46,6 +48,7 @@ docs/release-notes/v1-rc-<date>.md
 - prompt revision: <revision>
 - pipeline revision: <revision>
 - commit SHA: <sha>
+- azure:     packages/evals/reports/eval-report-<ts>.json (passed N/M, critical clean)
 - anthropic: packages/evals/reports/eval-report-<ts>.json (passed N/M, critical clean)
 - openai:    packages/evals/reports/eval-report-<ts>.json (passed N/M, critical clean)
 - gemini:    packages/evals/reports/eval-report-<ts>.json (passed N/M, critical clean)
@@ -58,6 +61,7 @@ docs/release-notes/v1-rc-<date>.md
 After all in-scope providers are critical-case clean:
 
 ```bash
+pnpm tsx scripts/refresh-gold-baseline.ts azure     packages/evals/reports/eval-report-<ts-azure>.json
 pnpm tsx scripts/refresh-gold-baseline.ts anthropic packages/evals/reports/eval-report-<ts-anthropic>.json
 pnpm tsx scripts/refresh-gold-baseline.ts openai    packages/evals/reports/eval-report-<ts-openai>.json
 pnpm tsx scripts/refresh-gold-baseline.ts gemini    packages/evals/reports/eval-report-<ts-gemini>.json
@@ -91,7 +95,7 @@ Capture the review in the release notes file (§ 3) with one paragraph per provi
 
 ## 6. Sign the release gate
 
-When all three providers are clean, baselines are promoted, README updated, and drift reviewed:
+When all in-scope providers are clean, baselines are promoted, README updated, and drift reviewed:
 
 1. Re-walk `docs/v1-release-checklist.md`. Section K should now be all `[x]` for the in-scope providers.
 2. Add a changelog entry under `packages/canon/changelog/NNNN-v1-release-gate.md` referencing this run, the checklist, and the release-notes file.

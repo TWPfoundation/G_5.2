@@ -94,7 +94,7 @@ Follow-up task #25 ("Capture the first cross-provider RC baseline trio and check
 - [x] Drift bands are documented in `docs/drift-budget.md`; merge-blocking policy in `docs/eval-discipline.md`; gold baseline refresh process in `docs/gold-baseline-process.md`.
 - [x] `scripts/refresh-gold-baseline.ts` validates a fresh report and refuses to promote one with critical failures.
 - [x] Witness eval coverage exists inside `packages/evals` for both `witness-policy` and `witness-runtime`, including consent-gate and product-root isolation cases.
-- [ ] **(per-RC operator layer)** RC baseline reports captured for each configured provider (anthropic, openai, gemini) — see `docs/release-candidate-baseline.md` for the procedure. This step requires `OPENROUTER_API_KEY` and is performed by the operator on the release-candidate commit. M8 ships the procedure; the artifacts are captured at RC time.
+- [ ] **(per-RC operator layer)** RC baseline reports captured for each configured provider in scope (`azure`, `anthropic`, `openai`, `gemini`) — see `docs/release-candidate-baseline.md` for the procedure. This step requires live provider credentials and is performed by the operator on the release-candidate commit. M8 ships the procedure; the artifacts are captured at RC time.
 
 ## G. Operator studio is coherent and navigable
 
@@ -134,7 +134,8 @@ Follow-up task #25 ("Capture the first cross-provider RC baseline trio and check
 
 This is the section that must be re-verified at every release-candidate commit, because canon and prompts evolve. M8 ships the procedure (`docs/release-candidate-baseline.md`), the script (`scripts/refresh-gold-baseline.ts`), the schema (`packages/evals/src/reporters/reportSchema.ts`), and the gates (critical-failure refusal, drift bands). The boxes below stay unchecked in the repo and are checked on the operator's release-candidate branch / release notes when the runs happen.
 
-- [ ] Anthropic baseline captured: `packages/evals/reports/eval-report-<timestamp>.json` and promoted via `scripts/refresh-gold-baseline.ts anthropic <reportPath>`.
+- [ ] Azure baseline captured: `packages/evals/reports/eval-report-<timestamp>.json` and promoted via `scripts/refresh-gold-baseline.ts azure <reportPath>`.
+- [ ] Anthropic baseline captured + promoted.
 - [ ] OpenAI baseline captured + promoted.
 - [ ] Gemini baseline captured + promoted.
 - [ ] Cross-provider drift reviewed against `docs/drift-budget.md`; deltas outside the bands either fixed or explicitly accepted in the release notes.
