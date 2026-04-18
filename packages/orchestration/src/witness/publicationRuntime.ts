@@ -63,6 +63,11 @@ async function loadTestimonyOrThrow(
   if (!testimony) {
     throw new Error(`Unknown testimony record: ${testimonyId}`);
   }
+  if (testimony.state !== "sealed") {
+    throw new Error(
+      "Witness publication bundle creation requires a sealed testimony."
+    );
+  }
   return testimony;
 }
 
@@ -74,6 +79,11 @@ async function loadSynthesisOrThrow(
   if (!synthesis) {
     throw new Error(`Unknown synthesis record: ${synthesisId}`);
   }
+  if (synthesis.status !== "approved") {
+    throw new Error(
+      "Witness publication bundle creation requires an approved synthesis."
+    );
+  }
   return synthesis;
 }
 
@@ -84,6 +94,11 @@ async function loadAnnotationOrThrow(
   const annotation = await annotationStore.load(annotationId);
   if (!annotation) {
     throw new Error(`Unknown annotation record: ${annotationId}`);
+  }
+  if (annotation.status !== "approved") {
+    throw new Error(
+      "Witness publication bundle creation requires an approved annotation."
+    );
   }
   return annotation;
 }
@@ -188,7 +203,7 @@ export async function createWitnessPublicationBundle(
     witnessId: testimony.witnessId,
     testimonyId: testimony.id,
     archiveCandidateId: archiveCandidate.id,
-    sourceTestimonyUpdatedAt: testimony.updatedAt,
+    sourceTestimonyUpdatedAt: archiveCandidate.testimonyUpdatedAt,
     sourceSynthesisId: synthesis.id,
     sourceAnnotationId: annotation.id,
     createdAt: new Date().toISOString(),

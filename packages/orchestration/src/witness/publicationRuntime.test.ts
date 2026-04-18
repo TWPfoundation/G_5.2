@@ -86,7 +86,7 @@ test("PublicationBundle createWitnessPublicationBundle requires publication_read
       id: "candidate-publication",
       witnessId: testimony.witnessId,
       testimonyId: testimony.id,
-      testimonyUpdatedAt: testimony.updatedAt,
+      testimonyUpdatedAt: "2026-04-19T09:04:30.000Z",
       approvedSynthesisId: synthesis.id,
       approvedAnnotationId: annotation.id,
       createdAt: "2026-04-19T09:08:00.000Z",
@@ -112,7 +112,10 @@ test("PublicationBundle createWitnessPublicationBundle requires publication_read
     });
 
     assert.equal(bundle.archiveCandidateId, archiveCandidate.id);
-    assert.equal(bundle.sourceTestimonyUpdatedAt, testimony.updatedAt);
+    assert.equal(
+      bundle.sourceTestimonyUpdatedAt,
+      archiveCandidate.testimonyUpdatedAt
+    );
     assert.equal(bundle.sourceSynthesisId, synthesis.id);
     assert.equal(bundle.sourceAnnotationId, annotation.id);
     assert.match(bundle.bundleJsonPath, /\.json$/);
@@ -135,7 +138,7 @@ test("PublicationBundle createWitnessPublicationBundle requires publication_read
     assert.deepEqual(bundlePayload.annotations, annotation.entries);
     assert.equal(
       bundlePayload.archiveCandidate.testimonyUpdatedAt,
-      testimony.updatedAt
+      archiveCandidate.testimonyUpdatedAt
     );
 
     const markdown = await readFile(bundle.bundleMarkdownPath as string, "utf8");
@@ -238,6 +241,125 @@ test("PublicationBundle createWitnessPublicationBundle rejects non-publication-r
           publicationBundleStore,
         }),
       /unknown archive candidate/i
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("PublicationBundle createWitnessPublicationBundle rejects source records that are not sealed and approved", async () => {
+  const root = await mkdtemp(
+    path.join(os.tmpdir(), "g52-witness-publication-runtime-source-state-")
+  );
+
+  try {
+    const testimonyStore = new FileWitnessTestimonyStore(path.join(root, "testimony"));
+    const synthesisStore = new FileWitnessSynthesisStore(path.join(root, "synthesis"));
+    const annotationStore = new FileWitnessAnnotationStore(path.join(root, "annotations"));
+    const archiveCandidateStore = new FileWitnessArchiveCandidateStore(path.join(root, "archive"));
+    const publicationBundleStore = new FileWitnessPublicationBundleStore(
+      path.join(root, "bundle-records")
+    );
+
+    const testimony = await testimonyStore.save({
+      id: "testimony-source-state",
+      witnessId: "wit-source-state",
+      sessionId: "session-source-state",
+      state: "retained",
+      createdAt: "2026-04-19T11:00:00.000Z",
+      updatedAt: "2026-04-19T11:01:00.000Z",
+      segments: [],
+    });
+    const synthesis = await synthesisStore.save({
+      id: "synth-source-state",
+      witnessId: testimony.witnessId,
+      testimonyId: testimony.id,
+      createdAt: "2026-04-19T11:02:00.000Z",
+      updatedAt: "2026-04-19T11:02:00.000Z",
+      status: "approved",
+      source: "operator",
+      text: "Approved synthesis",
+    });
+    const annotation = await annotationStore.save({
+      id: "annot-source-state",
+      witnessId: testimony.witnessId,
+      testimonyId: testimony.id,
+      createdAt: "2026-04-19T11:03:00.000Z",
+      updatedAt: "2026-04-19T11:03:00.000Z",
+      status: "approved",
+      source: "operator",
+      entries: [],
+    });
+    const archiveCandidate = await archiveCandidateStore.save({
+      id: "candidate-source-state",
+      witnessId: testimony.witnessId,
+      testimonyId: testimony.id,
+      testimonyUpdatedAt: "2026-04-19T11:01:00.000Z",
+      approvedSynthesisId: synthesis.id,
+      approvedAnnotationId: annotation.id,
+      createdAt: "2026-04-19T11:04:00.000Z",
+      updatedAt: "2026-04-19T11:04:00.000Z",
+      status: "publication_ready",
+    });
+
+    await assert.rejects(
+      () =>
+        createWitnessPublicationBundle({
+          publicationBundleRoot: path.join(root, "bundle-exports"),
+          archiveCandidateId: archiveCandidate.id,
+          testimonyStore,
+          synthesisStore,
+          annotationStore,
+          archiveCandidateStore,
+          publicationBundleStore,
+        }),
+      /sealed/i
+    );
+
+    await testimonyStore.save({
+      ...testimony,
+      state: "sealed",
+    });
+    await synthesisStore.save({
+      ...synthesis,
+      status: "draft",
+    });
+
+    await assert.rejects(
+      () =>
+        createWitnessPublicationBundle({
+          publicationBundleRoot: path.join(root, "bundle-exports"),
+          archiveCandidateId: archiveCandidate.id,
+          testimonyStore,
+          synthesisStore,
+          annotationStore,
+          archiveCandidateStore,
+          publicationBundleStore,
+        }),
+      /approved synthesis/i
+    );
+
+    await synthesisStore.save({
+      ...synthesis,
+      status: "approved",
+    });
+    await annotationStore.save({
+      ...annotation,
+      status: "draft",
+    });
+
+    await assert.rejects(
+      () =>
+        createWitnessPublicationBundle({
+          publicationBundleRoot: path.join(root, "bundle-exports"),
+          archiveCandidateId: archiveCandidate.id,
+          testimonyStore,
+          synthesisStore,
+          annotationStore,
+          archiveCandidateStore,
+          publicationBundleStore,
+        }),
+      /approved annotation/i
     );
   } finally {
     await rm(root, { recursive: true, force: true });
