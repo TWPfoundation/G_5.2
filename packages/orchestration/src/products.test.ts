@@ -72,21 +72,23 @@ test("createProductRegistry maps pes and witness to separate policy and data roo
   assert.equal(registry.witness.capabilities.authoring, false);
 });
 
-const publicationBundleShape: PublicationBundleRecord = {
-  id: "pb-001",
-  witnessId: "witness-001",
-  testimonyId: "testimony-001",
-  archiveCandidateId: "candidate-001",
-  sourceTestimonyUpdatedAt: "2026-04-17T00:00:00.000Z",
-  sourceSynthesisId: "synthesis-001",
-  sourceAnnotationId: "annotation-001",
-  createdAt: "2026-04-17T00:00:00.000Z",
-  updatedAt: "2026-04-17T00:00:00.000Z",
-  status: "created",
-  bundleJsonPath: "/tmp/bundle.json",
-};
+test("PublicationBundleRecord supports the created status and required bundle paths", () => {
+  const publicationBundleShape: PublicationBundleRecord = {
+    id: "pb-001",
+    witnessId: "witness-001",
+    testimonyId: "testimony-001",
+    archiveCandidateId: "candidate-001",
+    sourceTestimonyUpdatedAt: "2026-04-17T00:00:00.000Z",
+    sourceSynthesisId: "synthesis-001",
+    sourceAnnotationId: "annotation-001",
+    createdAt: "2026-04-17T00:00:00.000Z",
+    updatedAt: "2026-04-17T00:00:00.000Z",
+    status: "created",
+    bundleJsonPath: "/tmp/bundle.json",
+  };
 
-assert.equal(publicationBundleShape.status, "created");
+  assert.equal(publicationBundleShape.status, "created");
+});
 
 test("getProductConfig defaults to pes when product is omitted", () => {
   const registry = createProductRegistry(repoRoot);
