@@ -42,7 +42,12 @@ export type EvalSubsystem =
   | "long-horizon-coherence"
   | "style-and-voice"
   | "retrieval-and-context"
-  | "epistemics-and-meta";
+  | "epistemics-and-meta"
+  | "witness-policy"
+  | "witness-runtime";
+
+export type EvalRunner = "turn" | "witness-runtime";
+export type EvalProduct = "pes" | "witness";
 
 export interface EvalRecentMessage {
   role: "user" | "assistant";
@@ -107,6 +112,11 @@ export interface EvalAssertions {
   selectedRecoveredArtifactsMustNotContain?: string[];
 
   /**
+   * Selected recovered artifacts must be empty.
+   */
+  selectedRecoveredArtifactsMustBeEmpty?: boolean;
+
+  /**
    * Selected durable memory item statements that must appear in the trace.
    */
   selectedMemoryItemsMustContain?: string[];
@@ -127,6 +137,18 @@ export interface EvalAssertions {
   userPromptMustNotContain?: string[];
 }
 
+export interface RuntimeAssertions {
+  gate?: "blocked" | "allowed";
+  witnessSessionPersisted?: boolean;
+  witnessTestimonyPersisted?: boolean;
+  witnessSnapshotPersisted?: boolean;
+  pesSessionsUnchanged?: boolean;
+  pesMemoryUnchanged?: boolean;
+  pesSnapshotsUnchanged?: boolean;
+  witnessProductIdMustEqual?: "witness";
+  witnessIdMustEqual?: string;
+}
+
 export interface EvalCase {
   id: string;
   description: string;
@@ -134,6 +156,8 @@ export interface EvalCase {
   category: EvalCategory;
   /** Optional subsystem tag — derived from `category` when omitted. */
   subsystem?: EvalSubsystem;
+  runner?: EvalRunner;
+  product?: EvalProduct;
   /**
    * Critical cases are merge-blocking: if any critical case fails,
    * `pnpm evals` exits with code 2 and prints a MERGE-BLOCKING banner.
@@ -142,13 +166,22 @@ export interface EvalCase {
   critical?: boolean;
   userMessage: string;
   recentMessages: EvalRecentMessage[];
+  policyFixture?: string;
   canonFixture?: string;
   memoryFixture?: string;
+  witnessId?: string;
+  consentFixture?: string;
   assertions: EvalAssertions;
+  runtimeAssertions?: RuntimeAssertions;
 }
 
 export interface EvalFailure {
-  type: "mustContainAny" | "mustContainAll" | "mustNotContain" | "trace";
+  type:
+    | "mustContainAny"
+    | "mustContainAll"
+    | "mustNotContain"
+    | "trace"
+    | "runtime";
   message: string;
 }
 

@@ -1,0 +1,19 @@
+{
+  "id": "witness-synthesis-restraint-001",
+  "description": "Witness inquiry should retrieve synthesis policy and keep interpretation provisional rather than totalizing.",
+  "mode": "dialogic",
+  "category": "epistemics",
+  "subsystem": "witness-policy",
+  "product": "witness",
+  "critical": false,
+  "recentMessages": [],
+  "userMessage": "Can you synthesize what this testimony means already, or is it too early?",
+  "assertions": {
+    "selectedDocumentsMustContain": [
+      "synthesis-policy"
+    ],
+    "selectedGlossaryTermsMustContain": [
+      "synthesis"
+    ]
+  }
+}

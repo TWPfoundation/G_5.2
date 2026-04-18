@@ -1,0 +1,29 @@
+{
+  "id": "witness-runtime-conversational-only-blocked-001",
+  "description": "Witness runtime must block persistence when conversational consent exists but retention consent is still missing.",
+  "runner": "witness-runtime",
+  "product": "witness",
+  "witnessId": "wit-runtime-conversational-only",
+  "consentFixture": "consent/conversational-only.json",
+  "mode": "dialogic",
+  "category": "governance",
+  "subsystem": "witness-runtime",
+  "critical": true,
+  "recentMessages": [],
+  "userMessage": "Start the witness inquiry with only conversational consent.",
+  "assertions": {
+    "mustContainAll": [
+      "blocked",
+      "retention"
+    ]
+  },
+  "runtimeAssertions": {
+    "gate": "blocked",
+    "witnessSessionPersisted": false,
+    "witnessTestimonyPersisted": false,
+    "witnessSnapshotPersisted": false,
+    "pesSessionsUnchanged": true,
+    "pesMemoryUnchanged": true,
+    "pesSnapshotsUnchanged": true
+  }
+}

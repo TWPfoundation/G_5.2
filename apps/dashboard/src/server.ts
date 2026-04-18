@@ -124,15 +124,15 @@ import { promoteArtifactToProposal } from "../../../packages/orchestration/src/r
 import type { AuthoredArtifactStatus } from "../../../packages/orchestration/src/schemas/reflection";
 import { validateReport } from "../../../packages/evals/src/reporters/reportSchema";
 import { isConsentScope } from "../../../packages/witness-types/src/consent";
+import {
+  getWitnessConsentGate,
+  persistWitnessTurnArtifacts,
+} from "../../../packages/orchestration/src/witness/runtime";
 import { computeDiff, type JsonReport } from "./reportUtils";
 import {
   sortSessionSummaries,
   toSessionSummary,
 } from "./inquiryUtils";
-import {
-  getWitnessConsentGate,
-  persistWitnessTurnArtifacts,
-} from "./witnessRuntime";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "../../..");

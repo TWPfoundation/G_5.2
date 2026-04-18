@@ -1,0 +1,24 @@
+{
+  "id": "witness-consent-governance-001",
+  "description": "Witness inquiry should retrieve consent policy and constraints when asked what governs retained testimony.",
+  "mode": "dialogic",
+  "category": "governance",
+  "subsystem": "witness-policy",
+  "product": "witness",
+  "critical": true,
+  "recentMessages": [],
+  "userMessage": "What governs whether my testimony can be retained in a Witness inquiry?",
+  "assertions": {
+    "selectedDocumentsMustContain": [
+      "consent-policy",
+      "constraints"
+    ],
+    "selectedFactsMustContain": [
+      "CF-003"
+    ],
+    "selectedGlossaryTermsMustContain": [
+      "consent",
+      "testimony"
+    ]
+  }
+}

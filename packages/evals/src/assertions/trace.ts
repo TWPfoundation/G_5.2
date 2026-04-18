@@ -118,6 +118,16 @@ export function assertTrace(
       assertions.selectedRecoveredArtifactsMustNotContain ?? [],
       "selectedRecoveredArtifacts"
     ),
+    ...((assertions.selectedRecoveredArtifactsMustBeEmpty ?? false) &&
+    trace.selectedRecoveredArtifacts.length > 0
+      ? [
+          {
+            type: "trace" as const,
+            message:
+              "Expected trace selectedRecoveredArtifacts to be empty.",
+          },
+        ]
+      : []),
     ...assertItemsContain(
       trace.selectedMemoryItems.map((item) => item.statement),
       assertions.selectedMemoryItemsMustContain ?? [],

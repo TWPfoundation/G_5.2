@@ -1,0 +1,27 @@
+{
+  "id": "witness-runtime-no-consent-blocked-001",
+  "description": "Witness runtime must block persistence when no consent decisions exist.",
+  "runner": "witness-runtime",
+  "product": "witness",
+  "witnessId": "wit-runtime-none",
+  "mode": "dialogic",
+  "category": "governance",
+  "subsystem": "witness-runtime",
+  "critical": true,
+  "recentMessages": [],
+  "userMessage": "Start the witness inquiry without consent.",
+  "assertions": {
+    "mustContainAll": [
+      "blocked"
+    ]
+  },
+  "runtimeAssertions": {
+    "gate": "blocked",
+    "witnessSessionPersisted": false,
+    "witnessTestimonyPersisted": false,
+    "witnessSnapshotPersisted": false,
+    "pesSessionsUnchanged": true,
+    "pesMemoryUnchanged": true,
+    "pesSnapshotsUnchanged": true
+  }
+}

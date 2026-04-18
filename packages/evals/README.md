@@ -1,6 +1,6 @@
 # @g52/evals
 
-Regression harness for canon-governed turn behavior.
+Regression harness for product-aware governed turn behavior.
 
 ## Philosophy
 
@@ -9,7 +9,8 @@ Keep assertions deterministic.
 The harness currently supports:
 - output-string assertions
 - trace assertions over selected docs/facts/glossary terms/recovered artifacts
-- fixture canon roots for retrieval/regression cases that should not depend on the live canon package
+- fixture policy roots for retrieval/regression cases that should not depend on the live packages
+- Witness runtime evals for consent gating and product-root isolation
 
 No LLM-as-judge layer is used.
 
@@ -44,8 +45,12 @@ Cases live in `src/fixtures/cases/`.
 
 Core fields:
 - `id`, `description`, `mode`, `category`
+- optional `runner` (`turn` by default, or `witness-runtime`)
+- optional `product` (`pes` by default, or `witness`)
 - `userMessage`, `recentMessages`
-- optional `canonFixture`
+- optional `policyFixture`
+- optional legacy `canonFixture` alias
+- optional `witnessId`, `consentFixture`, `runtimeAssertions` for Witness runtime cases
 - `assertions`
 
 Assertion families:
@@ -55,13 +60,20 @@ Assertion families:
   - `selectedFactsMustContain` / `selectedFactsMustNotContain`
   - `selectedGlossaryTermsMustContain` / `selectedGlossaryTermsMustNotContain`
   - `selectedRecoveredArtifactsMustContain` / `selectedRecoveredArtifactsMustNotContain`
+  - `selectedRecoveredArtifactsMustBeEmpty`
   - `userPromptMustContain` / `userPromptMustNotContain`
+
+Witness-specific reporting:
+- `witness-policy` subsystem for Witness policy-root retrieval/prompt/output cases
+- `witness-runtime` subsystem for consent/testimony/session/snapshot boundary cases
 
 ## Fixture Canon
 
-Alternative canon fixtures live in `src/fixtures/canon/`.
+Alternative policy fixtures live in `src/fixtures/canon/`.
 
 Use them when a case needs deterministic canon states that should not be added to the live canon package, such as:
 - draft vs active retrieval gating
 - archived fact exclusion
 - schema edge cases
+
+Witness consent fixtures live in `src/fixtures/witness/consent/`.

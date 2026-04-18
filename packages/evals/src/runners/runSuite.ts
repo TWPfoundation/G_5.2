@@ -1,14 +1,16 @@
 import type { EvalCase, EvalResult } from "../types";
 import type { ModelProvider } from "../../../orchestration/src/types/providers";
+import type { ProductRegistry } from "../../../orchestration/src/products";
 import { runCase } from "./runCase";
 import { printResult } from "../reporters/consoleReporter";
 
 export interface RunSuiteInput {
   cases: EvalCase[];
   provider: ModelProvider;
-  defaultCanonRoot: string;
-  canonFixturesRoot: string;
+  productRegistry: ProductRegistry;
+  policyFixturesRoot: string;
   memoryFixturesRoot: string;
+  witnessFixturesRoot: string;
   /** Capture full pipeline trace for each case (debug/eval mode). */
   captureTrace?: boolean;
 }
@@ -27,9 +29,10 @@ export interface SuiteRunResult {
 export async function runSuite({
   cases,
   provider,
-  defaultCanonRoot,
-  canonFixturesRoot,
+  productRegistry,
+  policyFixturesRoot,
   memoryFixturesRoot,
+  witnessFixturesRoot,
   captureTrace = false,
 }: RunSuiteInput): Promise<SuiteRunResult> {
   const results: EvalResult[] = [];
@@ -38,9 +41,10 @@ export async function runSuite({
     const result = await runCase({
       evalCase,
       provider,
-      defaultCanonRoot,
-      canonFixturesRoot,
+      productRegistry,
+      policyFixturesRoot,
       memoryFixturesRoot,
+      witnessFixturesRoot,
       captureTrace,
     });
     results.push(result);

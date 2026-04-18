@@ -162,6 +162,7 @@ test("witness endpoints persist consent, sessions, and testimony without touchin
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         product: "witness",
+        provider: "mock",
         witnessId,
         mode: "dialogic",
         userMessage: "I need to start the inquiry.",

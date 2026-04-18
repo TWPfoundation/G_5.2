@@ -15,7 +15,7 @@ import {
   getWitnessConsentGate,
   persistWitnessTurnArtifacts,
   type WitnessCompensationEvent,
-} from "./witnessRuntime";
+} from "../../../packages/orchestration/src/witness/runtime";
 
 function buildSession(overrides: Partial<InquirySession> = {}): InquirySession {
   return {

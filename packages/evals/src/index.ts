@@ -15,6 +15,7 @@ import { fileURLToPath } from "node:url";
 import { loadCases } from "./fixtures/loadCases";
 import { runSuite } from "./runners/runSuite";
 import { buildEvalProvider } from "./runners/providerFactory";
+import { createProductRegistry } from "../../orchestration/src/products";
 import {
   printSummary,
   printCategoryBreakdown,
@@ -30,14 +31,20 @@ const __dirname = path.dirname(__filename);
 async function main() {
   const packageRoot = path.resolve(__dirname, "..");
   const repoRoot = path.resolve(packageRoot, "../..");
-  const canonRoot = path.join(repoRoot, "packages", "canon");
+  const productRegistry = createProductRegistry(repoRoot);
   const casesDir = path.join(packageRoot, "src", "fixtures", "cases");
-  const canonFixturesRoot = path.join(packageRoot, "src", "fixtures", "canon");
+  const policyFixturesRoot = path.join(packageRoot, "src", "fixtures", "canon");
   const memoryFixturesRoot = path.join(
     packageRoot,
     "src",
     "fixtures",
     "memory"
+  );
+  const witnessFixturesRoot = path.join(
+    packageRoot,
+    "src",
+    "fixtures",
+    "witness"
   );
   const reportsDir = path.join(packageRoot, "reports");
 
@@ -61,9 +68,10 @@ async function main() {
   const { results, providerName, modelName } = await runSuite({
     cases,
     provider,
-    defaultCanonRoot: canonRoot,
-    canonFixturesRoot,
+    productRegistry,
+    policyFixturesRoot,
     memoryFixturesRoot,
+    witnessFixturesRoot,
     captureTrace,
   });
 
@@ -72,7 +80,7 @@ async function main() {
   printSubsystemScorecards(score);
   printCategoryBreakdown(results);
   const metadata = await buildReportMetadata({
-    canonRoot,
+    canonRoot: productRegistry.pes.policyRoot,
     entrypoint: "packages/evals/src/index.ts",
     captureTrace,
     filter,

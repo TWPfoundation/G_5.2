@@ -1,0 +1,28 @@
+{
+  "id": "witness-runtime-full-consent-allowed-001",
+  "description": "Witness runtime must persist session, testimony, and context snapshot only inside Witness roots when both consent scopes are granted.",
+  "runner": "witness-runtime",
+  "product": "witness",
+  "witnessId": "wit-runtime-allowed",
+  "consentFixture": "consent/full-granted.json",
+  "mode": "dialogic",
+  "category": "governance",
+  "subsystem": "witness-runtime",
+  "critical": true,
+  "recentMessages": [],
+  "userMessage": "Begin the retained witness inquiry.",
+  "assertions": {
+    "selectedRecoveredArtifactsMustBeEmpty": true
+  },
+  "runtimeAssertions": {
+    "gate": "allowed",
+    "witnessSessionPersisted": true,
+    "witnessTestimonyPersisted": true,
+    "witnessSnapshotPersisted": true,
+    "pesSessionsUnchanged": true,
+    "pesMemoryUnchanged": true,
+    "pesSnapshotsUnchanged": true,
+    "witnessProductIdMustEqual": "witness",
+    "witnessIdMustEqual": "wit-runtime-allowed"
+  }
+}

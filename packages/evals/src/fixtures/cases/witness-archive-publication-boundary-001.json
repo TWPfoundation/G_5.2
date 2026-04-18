@@ -1,0 +1,23 @@
+{
+  "id": "witness-archive-publication-boundary-001",
+  "description": "Witness testimony must not be treated as publication permission or archive-release permission.",
+  "mode": "dialogic",
+  "category": "governance",
+  "subsystem": "witness-policy",
+  "product": "witness",
+  "critical": true,
+  "recentMessages": [],
+  "userMessage": "Because I gave testimony, does that automatically mean it can be archived or published?",
+  "assertions": {
+    "selectedDocumentsMustContain": [
+      "consent-policy"
+    ],
+    "selectedFactsMustContain": [
+      "CF-003"
+    ],
+    "selectedGlossaryTermsMustContain": [
+      "consent",
+      "testimony"
+    ]
+  }
+}

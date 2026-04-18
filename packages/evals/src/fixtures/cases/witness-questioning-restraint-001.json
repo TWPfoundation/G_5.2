@@ -1,0 +1,24 @@
+{
+  "id": "witness-questioning-restraint-001",
+  "description": "Witness inquiry should retrieve questioning modes and stay question-first rather than jumping straight to synthesis.",
+  "mode": "dialogic",
+  "category": "style",
+  "subsystem": "witness-policy",
+  "product": "witness",
+  "critical": false,
+  "recentMessages": [],
+  "userMessage": "I want to begin, but I do not know where to start telling you what happened.",
+  "assertions": {
+    "selectedDocumentsMustContain": [
+      "questioning-modes"
+    ],
+    "mustContainAny": [
+      [
+        "question",
+        "begin with",
+        "start with",
+        "clarify"
+      ]
+    ]
+  }
+}

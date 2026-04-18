@@ -42,7 +42,12 @@ const EvalSubsystemSchema = z.enum([
   "style-and-voice",
   "retrieval-and-context",
   "epistemics-and-meta",
+  "witness-policy",
+  "witness-runtime",
 ]);
+
+const EvalRunnerSchema = z.enum(["turn", "witness-runtime"]);
+const EvalProductSchema = z.enum(["pes", "witness"]);
 
 const EvalRecentMessageSchema = z.object({
   role: z.enum(["user", "assistant"]),
@@ -64,6 +69,7 @@ const EvalAssertionsSchema = z
     selectedGlossaryTermsMustNotContain: z.array(z.string().min(1)).optional(),
     selectedRecoveredArtifactsMustContain: z.array(z.string().min(1)).optional(),
     selectedRecoveredArtifactsMustNotContain: z.array(z.string().min(1)).optional(),
+    selectedRecoveredArtifactsMustBeEmpty: z.boolean().optional(),
     selectedMemoryItemsMustContain: z.array(z.string().min(1)).optional(),
     selectedMemoryItemsMustNotContain: z.array(z.string().min(1)).optional(),
     userPromptMustContain: z.array(z.string().min(1)).optional(),
@@ -82,12 +88,27 @@ const EvalAssertionsSchema = z
       (a.selectedGlossaryTermsMustNotContain?.length ?? 0) > 0 ||
       (a.selectedRecoveredArtifactsMustContain?.length ?? 0) > 0 ||
       (a.selectedRecoveredArtifactsMustNotContain?.length ?? 0) > 0 ||
+      a.selectedRecoveredArtifactsMustBeEmpty === true ||
       (a.selectedMemoryItemsMustContain?.length ?? 0) > 0 ||
       (a.selectedMemoryItemsMustNotContain?.length ?? 0) > 0 ||
       (a.userPromptMustContain?.length ?? 0) > 0 ||
       (a.userPromptMustNotContain?.length ?? 0) > 0,
     { message: "assertions must have at least one non-empty assertion type" }
   );
+
+const RuntimeAssertionsSchema = z
+  .object({
+    gate: z.enum(["blocked", "allowed"]).optional(),
+    witnessSessionPersisted: z.boolean().optional(),
+    witnessTestimonyPersisted: z.boolean().optional(),
+    witnessSnapshotPersisted: z.boolean().optional(),
+    pesSessionsUnchanged: z.boolean().optional(),
+    pesMemoryUnchanged: z.boolean().optional(),
+    pesSnapshotsUnchanged: z.boolean().optional(),
+    witnessProductIdMustEqual: z.literal("witness").optional(),
+    witnessIdMustEqual: z.string().min(1).optional(),
+  })
+  .optional();
 
 export const EvalCaseSchema = z.object({
   id: z
@@ -101,12 +122,44 @@ export const EvalCaseSchema = z.object({
   mode: EvalModeSchema,
   category: EvalCategorySchema,
   subsystem: EvalSubsystemSchema.optional(),
+  runner: EvalRunnerSchema.optional(),
+  product: EvalProductSchema.optional(),
   critical: z.boolean().optional(),
   userMessage: z.string().min(1),
   recentMessages: z.array(EvalRecentMessageSchema),
+  policyFixture: z.string().min(1).optional(),
   canonFixture: z.string().min(1).optional(),
   memoryFixture: z.string().min(1).optional(),
+  witnessId: z.string().min(1).optional(),
+  consentFixture: z.string().min(1).optional(),
   assertions: EvalAssertionsSchema,
+  runtimeAssertions: RuntimeAssertionsSchema,
+}).superRefine((value, ctx) => {
+  if (value.runner === "witness-runtime") {
+    if (value.product !== "witness") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["product"],
+        message: 'witness-runtime cases require product "witness"',
+      });
+    }
+
+    if (!value.witnessId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["witnessId"],
+        message: "witness-runtime cases require witnessId",
+      });
+    }
+
+    if (!value.runtimeAssertions) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["runtimeAssertions"],
+        message: "witness-runtime cases require runtimeAssertions",
+      });
+    }
+  }
 });
 
 export type ValidatedEvalCase = z.infer<typeof EvalCaseSchema>;

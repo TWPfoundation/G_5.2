@@ -1,0 +1,14 @@
+[
+  {
+    "scope": "conversational",
+    "status": "granted",
+    "actor": "witness",
+    "decidedAt": "2026-04-18T10:00:00.000Z"
+  },
+  {
+    "scope": "retention",
+    "status": "granted",
+    "actor": "witness",
+    "decidedAt": "2026-04-18T10:01:00.000Z"
+  }
+]

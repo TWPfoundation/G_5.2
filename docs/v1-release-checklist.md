@@ -93,6 +93,7 @@ Follow-up task #25 ("Capture the first cross-provider RC baseline trio and check
 - [x] Critical-case failures exit the eval CLI with code `2` and print a `MERGE-BLOCKING` banner.
 - [x] Drift bands are documented in `docs/drift-budget.md`; merge-blocking policy in `docs/eval-discipline.md`; gold baseline refresh process in `docs/gold-baseline-process.md`.
 - [x] `scripts/refresh-gold-baseline.ts` validates a fresh report and refuses to promote one with critical failures.
+- [x] Witness eval coverage exists inside `packages/evals` for both `witness-policy` and `witness-runtime`, including consent-gate and product-root isolation cases.
 - [ ] **(per-RC operator layer)** RC baseline reports captured for each configured provider (anthropic, openai, gemini) — see `docs/release-candidate-baseline.md` for the procedure. This step requires `OPENROUTER_API_KEY` and is performed by the operator on the release-candidate commit. M8 ships the procedure; the artifacts are captured at RC time.
 
 ## G. Operator studio is coherent and navigable
