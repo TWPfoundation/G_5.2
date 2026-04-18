@@ -19,3 +19,14 @@ export type {
   TestimonySegment,
   TestimonyStore,
 } from "./testimony";
+export type {
+  SynthesisRecord,
+  SynthesisStatus,
+  SynthesisStore,
+} from "./synthesis";
+export type {
+  AnnotationEntry,
+  AnnotationRecord,
+  AnnotationStatus,
+  AnnotationStore,
+} from "./annotation";

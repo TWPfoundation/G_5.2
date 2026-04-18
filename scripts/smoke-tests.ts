@@ -39,6 +39,10 @@ import {
   importSessionBundle,
 } from "../packages/orchestration/src/persistence/archive";
 import { FileWitnessConsentStore } from "../packages/orchestration/src/witness/fileConsentStore";
+import {
+  FileWitnessAnnotationStore,
+  FileWitnessSynthesisStore,
+} from "../packages/orchestration/src/witness/fileDraftStores";
 import { FileWitnessTestimonyStore } from "../packages/orchestration/src/witness/fileTestimonyStore";
 import {
   CanonProposalSchema,
@@ -53,6 +57,10 @@ import { FileReflectionStore } from "../packages/orchestration/src/reflection/fi
 import { FileAuthoredArtifactStore } from "../packages/orchestration/src/reflection/fileAuthoredArtifactStore";
 import { promoteArtifactToProposal } from "../packages/orchestration/src/reflection/promoteArtifact";
 import {
+  approveWitnessAnnotation,
+  approveWitnessSynthesis,
+  createWitnessAnnotationDraft,
+  createWitnessSynthesisDraft,
   getWitnessConsentGate,
   persistWitnessTurnArtifacts,
 } from "../apps/dashboard/src/witnessRuntime";
@@ -510,6 +518,8 @@ async function pathWitnessVerticalSlice(): Promise<void> {
     const witnessMemoryRoot = path.join(root, "witness", "memory");
     const witnessTestimonyRoot = path.join(root, "witness", "testimony");
     const witnessConsentRoot = path.join(root, "witness", "consent");
+    const witnessSynthesisRoot = path.join(root, "witness", "synthesis");
+    const witnessAnnotationRoot = path.join(root, "witness", "annotations");
     const pesSessionsRoot = path.join(root, "pes", "sessions");
     const pesMemoryRoot = path.join(root, "pes", "memory");
     const witnessId = `smoke-witness-${randomUUID()}`;
@@ -520,6 +530,8 @@ async function pathWitnessVerticalSlice(): Promise<void> {
     const provider = new MockProvider();
     const consentStore = new FileWitnessConsentStore(witnessConsentRoot);
     const testimonyStore = new FileWitnessTestimonyStore(witnessTestimonyRoot);
+    const synthesisStore = new FileWitnessSynthesisStore(witnessSynthesisRoot);
+    const annotationStore = new FileWitnessAnnotationStore(witnessAnnotationRoot);
 
     const blocked = await getWitnessConsentGate(consentStore, witnessId);
     assert.equal(blocked.allowed, false);
@@ -576,10 +588,70 @@ async function pathWitnessVerticalSlice(): Promise<void> {
     assert.equal(testimony?.segments[0].role, "witness");
     assert.equal(testimony?.segments[1].role, "inquisitor");
 
+    await consentStore.appendDecision({
+      witnessId,
+      testimonyId: persisted.testimonyId,
+      scope: "synthesis",
+      status: "granted",
+      actor: "witness",
+      decidedAt: new Date().toISOString(),
+    });
+    await consentStore.appendDecision({
+      witnessId,
+      testimonyId: persisted.testimonyId,
+      scope: "annotation",
+      status: "granted",
+      actor: "witness",
+      decidedAt: new Date().toISOString(),
+    });
+
+    const synthesisDraft = await createWitnessSynthesisDraft(provider, {
+      policyRoot: witnessCanonRoot,
+      testimonyId: persisted.testimonyId,
+      testimonyStore,
+      synthesisStore,
+      consentStore,
+    });
+    const approvedSynthesis = await approveWitnessSynthesis({
+      synthesisStore,
+      testimonyStore,
+      synthesisId: synthesisDraft.id,
+      reviewNote: "smoke approval",
+    });
+    assert.equal(approvedSynthesis.status, "approved");
+
+    const testimonyAfterSynthesis = await testimonyStore.load(persisted.testimonyId);
+    assert.equal(testimonyAfterSynthesis?.state, "synthesized");
+
+    const witnessSegments =
+      testimonyAfterSynthesis?.segments
+        .filter((segment) => segment.role === "witness")
+        .map((segment) => segment.id) ?? [];
+    const annotationDraft = await createWitnessAnnotationDraft(provider, {
+      policyRoot: witnessCanonRoot,
+      testimonyId: persisted.testimonyId,
+      testimonyStore,
+      annotationStore,
+      consentStore,
+      segmentIds: witnessSegments,
+    });
+    assert.ok(annotationDraft.entries.length >= 1);
+
+    const approvedAnnotation = await approveWitnessAnnotation({
+      policyRoot: witnessCanonRoot,
+      annotationStore,
+      testimonyStore,
+      annotationId: annotationDraft.id,
+      reviewNote: "smoke approval",
+    });
+    assert.equal(approvedAnnotation.status, "approved");
+
     const pesSessionFiles = await readdir(pesSessionsRoot);
     const pesMemoryFiles = await readdir(pesMemoryRoot);
     assert.equal(pesSessionFiles.length, 0, "witness flow must not write P-E-S sessions");
     assert.equal(pesMemoryFiles.length, 0, "witness flow must not write P-E-S memory");
+    assert.ok((await readdir(witnessSynthesisRoot)).length >= 1);
+    assert.ok((await readdir(witnessAnnotationRoot)).length >= 1);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

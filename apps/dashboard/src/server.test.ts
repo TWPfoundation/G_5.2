@@ -11,6 +11,10 @@ import { defaultContextSnapshotRoot } from "../../../packages/orchestration/src/
 import { createProductRegistry } from "../../../packages/orchestration/src/products";
 import { FileSessionStore } from "../../../packages/orchestration/src/sessions/fileSessionStore";
 import { FileWitnessConsentStore } from "../../../packages/orchestration/src/witness/fileConsentStore";
+import {
+  FileWitnessAnnotationStore,
+  FileWitnessSynthesisStore,
+} from "../../../packages/orchestration/src/witness/fileDraftStores";
 import { FileWitnessTestimonyStore } from "../../../packages/orchestration/src/witness/fileTestimonyStore";
 import { createDashboardServer } from "./server";
 
@@ -35,6 +39,8 @@ async function cleanupWitnessArtifacts(
 ) {
   const consentStore = new FileWitnessConsentStore(registry.witness.consentRoot!);
   const testimonyStore = new FileWitnessTestimonyStore(registry.witness.testimonyRoot!);
+  const synthesisStore = new FileWitnessSynthesisStore(registry.witness.synthesisRoot!);
+  const annotationStore = new FileWitnessAnnotationStore(registry.witness.annotationRoot!);
   const memoryStore = new FileMemoryStore(registry.witness.memoryRoot);
   const sessionStore = new FileSessionStore(registry.witness.sessionsRoot);
 
@@ -50,6 +56,20 @@ async function cleanupWitnessArtifacts(
     testimonyRecords
       .filter((record) => record.witnessId === witnessId)
       .map((record) => testimonyStore.delete(record.id))
+  );
+
+  const synthesisRecords = await synthesisStore.list();
+  await Promise.all(
+    synthesisRecords
+      .filter((record) => record.witnessId === witnessId)
+      .map((record) => synthesisStore.delete(record.id))
+  );
+
+  const annotationRecords = await annotationStore.list();
+  await Promise.all(
+    annotationRecords
+      .filter((record) => record.witnessId === witnessId)
+      .map((record) => annotationStore.delete(record.id))
   );
 
   const memoryItems = await memoryStore.list();
@@ -201,6 +221,202 @@ test("witness endpoints persist consent, sessions, and testimony without touchin
     const witnessSessions = await requestJson("/api/inquiry/sessions?product=witness");
     assert.equal(witnessSessions.response.status, 200);
     assert.ok(witnessSessions.json.some((session: { id: string }) => session.id === sessionId));
+
+    const pesSessions = await requestJson("/api/inquiry/sessions?product=pes");
+    assert.equal(pesSessions.response.status, 200);
+    assert.ok(!pesSessions.json.some((session: { id: string }) => session.id === sessionId));
+  } finally {
+    await cleanupWitnessArtifacts(witnessId, sessionId, turnId);
+  }
+});
+
+test("witness synthesis draft returns 409 until retention and synthesis consent are effective", async () => {
+  const witnessId = `wit-${randomUUID()}`;
+  let testimonyId: string | undefined;
+  let sessionId: string | undefined;
+  let turnId: string | undefined;
+
+  try {
+    for (const scope of ["conversational", "retention"]) {
+      const consent = await requestJson("/api/witness/consent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          witnessId,
+          scope,
+          status: "granted",
+          actor: "witness",
+        }),
+      });
+      assert.equal(consent.response.status, 201);
+    }
+
+    const turn = await requestJson("/api/inquiry/turn", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        product: "witness",
+        provider: "mock",
+        witnessId,
+        mode: "dialogic",
+        userMessage: "I need a testimony before synthesis.",
+      }),
+    });
+
+    assert.equal(turn.response.status, 200);
+    testimonyId = turn.json.testimonyId;
+    sessionId = turn.json.session.id;
+    turnId = turn.json.persistedTurn.id;
+
+    const draft = await requestJson("/api/witness/synthesis/draft", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        testimonyId,
+        provider: "mock",
+      }),
+    });
+
+    assert.equal(draft.response.status, 409);
+    assert.deepEqual(draft.json?.missingScopes, ["synthesis"]);
+  } finally {
+    await cleanupWitnessArtifacts(witnessId, sessionId, turnId);
+  }
+});
+
+test("witness synthesis and annotation endpoints persist drafts, approvals, and superseding within witness roots only", async () => {
+  const witnessId = `wit-${randomUUID()}`;
+  let testimonyId: string | undefined;
+  let sessionId: string | undefined;
+  let turnId: string | undefined;
+
+  try {
+    for (const scope of ["conversational", "retention", "synthesis", "annotation"]) {
+      const consent = await requestJson("/api/witness/consent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          witnessId,
+          scope,
+          status: "granted",
+          actor: "witness",
+        }),
+      });
+      assert.equal(consent.response.status, 201);
+    }
+
+    const turn = await requestJson("/api/inquiry/turn", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        product: "witness",
+        provider: "mock",
+        witnessId,
+        mode: "dialogic",
+        userMessage: "First I hesitated, and I am not sure why.",
+      }),
+    });
+
+    assert.equal(turn.response.status, 200);
+    testimonyId = turn.json.testimonyId;
+    sessionId = turn.json.session.id;
+    turnId = turn.json.persistedTurn.id;
+
+    const testimony = await requestJson(
+      `/api/witness/testimony/${encodeURIComponent(testimonyId!)}`
+    );
+    assert.equal(testimony.response.status, 200);
+    const witnessSegmentIds = testimony.json.segments
+      .filter((segment: { role: string }) => segment.role === "witness")
+      .map((segment: { id: string }) => segment.id);
+
+    const firstSynthesis = await requestJson("/api/witness/synthesis/draft", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        testimonyId,
+        provider: "mock",
+      }),
+    });
+    assert.equal(firstSynthesis.response.status, 201);
+
+    const firstApproved = await requestJson(
+      `/api/witness/synthesis/${encodeURIComponent(firstSynthesis.json.id)}/approve`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ note: "approve first" }),
+      }
+    );
+    assert.equal(firstApproved.response.status, 200);
+    assert.equal(firstApproved.json?.status, "approved");
+
+    const secondSynthesis = await requestJson("/api/witness/synthesis/draft", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        testimonyId,
+        provider: "mock",
+      }),
+    });
+    assert.equal(secondSynthesis.response.status, 201);
+
+    const secondApproved = await requestJson(
+      `/api/witness/synthesis/${encodeURIComponent(secondSynthesis.json.id)}/approve`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ note: "approve second" }),
+      }
+    );
+    assert.equal(secondApproved.response.status, 200);
+    assert.equal(secondApproved.json?.status, "approved");
+
+    const synthesisList = await requestJson(
+      `/api/witness/synthesis?witnessId=${encodeURIComponent(witnessId)}&testimonyId=${encodeURIComponent(testimonyId!)}`
+    );
+    assert.equal(synthesisList.response.status, 200);
+    assert.ok(
+      synthesisList.json.some(
+        (record: { id: string; status: string }) =>
+          record.id === firstSynthesis.json.id && record.status === "superseded"
+      )
+    );
+
+    const annotationDraft = await requestJson("/api/witness/annotations/draft", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        testimonyId,
+        provider: "mock",
+        segmentIds: witnessSegmentIds,
+      }),
+    });
+    assert.equal(annotationDraft.response.status, 201);
+    assert.ok(annotationDraft.json?.entries?.length >= 1);
+
+    const annotationApproved = await requestJson(
+      `/api/witness/annotations/${encodeURIComponent(annotationDraft.json.id)}/approve`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ note: "approve annotations" }),
+      }
+    );
+    assert.equal(annotationApproved.response.status, 200);
+    assert.equal(annotationApproved.json?.status, "approved");
+
+    const annotationList = await requestJson(
+      `/api/witness/annotations?witnessId=${encodeURIComponent(witnessId)}&testimonyId=${encodeURIComponent(testimonyId!)}`
+    );
+    assert.equal(annotationList.response.status, 200);
+    assert.equal(annotationList.json.length, 1);
+
+    const updatedTestimony = await requestJson(
+      `/api/witness/testimony/${encodeURIComponent(testimonyId!)}`
+    );
+    assert.equal(updatedTestimony.response.status, 200);
+    assert.equal(updatedTestimony.json?.state, "synthesized");
 
     const pesSessions = await requestJson("/api/inquiry/sessions?product=pes");
     assert.equal(pesSessions.response.status, 200);

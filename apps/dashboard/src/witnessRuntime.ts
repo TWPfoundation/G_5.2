@@ -1,6 +1,12 @@
 export {
+  approveWitnessAnnotation,
+  approveWitnessSynthesis,
+  createWitnessAnnotationDraft,
+  createWitnessSynthesisDraft,
   getWitnessConsentGate,
   persistWitnessTurnArtifacts,
+  rejectWitnessAnnotation,
+  rejectWitnessSynthesis,
   type PersistWitnessTurnArtifactsInput,
   type PersistWitnessTurnArtifactsResult,
   type WitnessCompensationEvent,

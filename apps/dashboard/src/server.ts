@@ -89,6 +89,10 @@ import {
   type ProductConfig,
 } from "../../../packages/orchestration/src/products";
 import { FileWitnessConsentStore, listConsentForWitness } from "../../../packages/orchestration/src/witness/fileConsentStore";
+import {
+  FileWitnessAnnotationStore,
+  FileWitnessSynthesisStore,
+} from "../../../packages/orchestration/src/witness/fileDraftStores";
 import { FileWitnessTestimonyStore } from "../../../packages/orchestration/src/witness/fileTestimonyStore";
 import {
   FileProposalStore,
@@ -127,8 +131,14 @@ import type { AuthoredArtifactStatus } from "../../../packages/orchestration/src
 import { validateReport } from "../../../packages/evals/src/reporters/reportSchema";
 import { isConsentScope } from "../../../packages/witness-types/src/consent";
 import {
+  approveWitnessAnnotation,
+  approveWitnessSynthesis,
+  createWitnessAnnotationDraft,
+  createWitnessSynthesisDraft,
   getWitnessConsentGate,
   persistWitnessTurnArtifacts,
+  rejectWitnessAnnotation,
+  rejectWitnessSynthesis,
 } from "../../../packages/orchestration/src/witness/runtime";
 import { computeDiff, type JsonReport } from "./reportUtils";
 import {
@@ -247,6 +257,27 @@ function testimonyStoreFor(product: ProductConfig): FileWitnessTestimonyStore {
   }
 
   return new FileWitnessTestimonyStore(product.testimonyRoot);
+}
+
+function synthesisStoreFor(product: ProductConfig): FileWitnessSynthesisStore {
+  if (!product.synthesisRoot) {
+    throw new Error(`Product ${product.id} does not define a synthesis root.`);
+  }
+
+  return new FileWitnessSynthesisStore(product.synthesisRoot);
+}
+
+function annotationStoreFor(product: ProductConfig): FileWitnessAnnotationStore {
+  if (!product.annotationRoot) {
+    throw new Error(`Product ${product.id} does not define an annotation root.`);
+  }
+
+  return new FileWitnessAnnotationStore(product.annotationRoot);
+}
+
+function witnessMissingScopes(error: unknown): string[] | null {
+  const maybe = error as Error & { missingScopes?: string[] };
+  return Array.isArray(maybe.missingScopes) ? maybe.missingScopes : null;
 }
 
 async function readSession(
@@ -1301,6 +1332,240 @@ export async function handleRequest(
       sendJson(res, 500, {
         error: err instanceof Error ? err.message : String(err),
       });
+    }
+    return;
+  }
+
+  if (url.pathname === "/api/witness/synthesis" && req.method === "GET") {
+    const witnessId = url.searchParams.get("witnessId")?.trim();
+    const testimonyId = url.searchParams.get("testimonyId")?.trim();
+    if (!witnessId || !testimonyId) {
+      sendJson(res, 400, { error: "witnessId and testimonyId are required" });
+      return;
+    }
+    try {
+      const items = (await synthesisStoreFor(WITNESS_CONFIG).list()).filter(
+        (record) =>
+          record.witnessId === witnessId && record.testimonyId === testimonyId
+      );
+      sendJson(res, 200, items);
+    } catch (err) {
+      sendJson(res, 500, {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+    return;
+  }
+
+  const witnessSynthesisMatch = url.pathname.match(/^\/api\/witness\/synthesis\/([^/]+)$/);
+  if (witnessSynthesisMatch && req.method === "GET") {
+    try {
+      const item = await synthesisStoreFor(WITNESS_CONFIG).load(
+        witnessSynthesisMatch[1]
+      );
+      if (!item) {
+        sendJson(res, 404, { error: "Synthesis record not found" });
+        return;
+      }
+      sendJson(res, 200, item);
+    } catch (err) {
+      sendJson(res, 500, {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+    return;
+  }
+
+  if (url.pathname === "/api/witness/synthesis/draft" && req.method === "POST") {
+    try {
+      const body = (await readJsonBody(req)) as {
+        testimonyId?: string;
+        provider?: string;
+      };
+      if (!body.testimonyId?.trim()) {
+        sendJson(res, 400, { error: "testimonyId is required" });
+        return;
+      }
+      const provider = isKnownProviderName(body.provider)
+        ? providerByName(body.provider)
+        : providerFromEnv();
+
+      const created = await createWitnessSynthesisDraft(provider, {
+        policyRoot: WITNESS_CONFIG.policyRoot,
+        testimonyId: body.testimonyId.trim(),
+        testimonyStore: testimonyStoreFor(WITNESS_CONFIG),
+        synthesisStore: synthesisStoreFor(WITNESS_CONFIG),
+        consentStore: consentStoreFor(WITNESS_CONFIG),
+      });
+      sendJson(res, 201, created);
+    } catch (err) {
+      const missingScopes = witnessMissingScopes(err);
+      if (missingScopes) {
+        sendJson(res, 409, {
+          error: "Witness consent requirements not met.",
+          missingScopes,
+        });
+        return;
+      }
+      const message = err instanceof Error ? err.message : String(err);
+      const status = /Unknown testimony/.test(message) ? 404 : 500;
+      sendJson(res, status, { error: message });
+    }
+    return;
+  }
+
+  const witnessSynthesisActionMatch = url.pathname.match(
+    /^\/api\/witness\/synthesis\/([^/]+)\/(approve|reject)$/
+  );
+  if (witnessSynthesisActionMatch && req.method === "POST") {
+    try {
+      const body = (await readJsonBody(req)) as { note?: string; actor?: string };
+      const [, synthesisId, action] = witnessSynthesisActionMatch;
+      const input = {
+        synthesisId,
+        synthesisStore: synthesisStoreFor(WITNESS_CONFIG),
+        testimonyStore: testimonyStoreFor(WITNESS_CONFIG),
+        reviewNote: typeof body.note === "string" ? body.note.trim() : undefined,
+      };
+      const updated =
+        action === "approve"
+          ? await approveWitnessSynthesis(input)
+          : await rejectWitnessSynthesis(input);
+      sendJson(res, 200, updated);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      const status = /Unknown synthesis/.test(message)
+        ? 404
+        : /Only draft/.test(message)
+          ? 400
+          : 500;
+      sendJson(res, status, { error: message });
+    }
+    return;
+  }
+
+  if (url.pathname === "/api/witness/annotations" && req.method === "GET") {
+    const witnessId = url.searchParams.get("witnessId")?.trim();
+    const testimonyId = url.searchParams.get("testimonyId")?.trim();
+    if (!witnessId || !testimonyId) {
+      sendJson(res, 400, { error: "witnessId and testimonyId are required" });
+      return;
+    }
+    try {
+      const items = (await annotationStoreFor(WITNESS_CONFIG).list()).filter(
+        (record) =>
+          record.witnessId === witnessId && record.testimonyId === testimonyId
+      );
+      sendJson(res, 200, items);
+    } catch (err) {
+      sendJson(res, 500, {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+    return;
+  }
+
+  const witnessAnnotationMatch = url.pathname.match(
+    /^\/api\/witness\/annotations\/([^/]+)$/
+  );
+  if (witnessAnnotationMatch && req.method === "GET") {
+    try {
+      const item = await annotationStoreFor(WITNESS_CONFIG).load(
+        witnessAnnotationMatch[1]
+      );
+      if (!item) {
+        sendJson(res, 404, { error: "Annotation record not found" });
+        return;
+      }
+      sendJson(res, 200, item);
+    } catch (err) {
+      sendJson(res, 500, {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+    return;
+  }
+
+  if (url.pathname === "/api/witness/annotations/draft" && req.method === "POST") {
+    try {
+      const body = (await readJsonBody(req)) as {
+        testimonyId?: string;
+        segmentIds?: string[];
+        provider?: string;
+      };
+      if (!body.testimonyId?.trim()) {
+        sendJson(res, 400, { error: "testimonyId is required" });
+        return;
+      }
+      if (
+        body.segmentIds !== undefined &&
+        (!Array.isArray(body.segmentIds) ||
+          body.segmentIds.some((segmentId) => typeof segmentId !== "string"))
+      ) {
+        sendJson(res, 400, { error: "segmentIds must be an array of strings" });
+        return;
+      }
+      const provider = isKnownProviderName(body.provider)
+        ? providerByName(body.provider)
+        : providerFromEnv();
+      const created = await createWitnessAnnotationDraft(provider, {
+        policyRoot: WITNESS_CONFIG.policyRoot,
+        testimonyId: body.testimonyId.trim(),
+        testimonyStore: testimonyStoreFor(WITNESS_CONFIG),
+        annotationStore: annotationStoreFor(WITNESS_CONFIG),
+        consentStore: consentStoreFor(WITNESS_CONFIG),
+        segmentIds: body.segmentIds?.map((segmentId) => segmentId.trim()),
+      });
+      sendJson(res, 201, created);
+    } catch (err) {
+      const missingScopes = witnessMissingScopes(err);
+      if (missingScopes) {
+        sendJson(res, 409, {
+          error: "Witness consent requirements not met.",
+          missingScopes,
+        });
+        return;
+      }
+      const message = err instanceof Error ? err.message : String(err);
+      const status =
+        /Unknown testimony/.test(message)
+          ? 404
+          : /Unknown testimony segment|witness segments|offsets|quote/.test(message)
+            ? 400
+            : 500;
+      sendJson(res, status, { error: message });
+    }
+    return;
+  }
+
+  const witnessAnnotationActionMatch = url.pathname.match(
+    /^\/api\/witness\/annotations\/([^/]+)\/(approve|reject)$/
+  );
+  if (witnessAnnotationActionMatch && req.method === "POST") {
+    try {
+      const body = (await readJsonBody(req)) as { note?: string; actor?: string };
+      const [, annotationId, action] = witnessAnnotationActionMatch;
+      const input = {
+        policyRoot: WITNESS_CONFIG.policyRoot,
+        annotationId,
+        annotationStore: annotationStoreFor(WITNESS_CONFIG),
+        testimonyStore: testimonyStoreFor(WITNESS_CONFIG),
+        reviewNote: typeof body.note === "string" ? body.note.trim() : undefined,
+      };
+      const updated =
+        action === "approve"
+          ? await approveWitnessAnnotation(input)
+          : await rejectWitnessAnnotation(input);
+      sendJson(res, 200, updated);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      const status =
+        /Unknown annotation/.test(message)
+          ? 404
+          : /Only draft|segment|offsets|quote/.test(message)
+            ? 400
+            : 500;
+      sendJson(res, status, { error: message });
     }
     return;
   }

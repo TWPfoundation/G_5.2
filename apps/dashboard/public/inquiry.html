@@ -226,10 +226,16 @@ body{margin:0;min-height:100vh;font-family:Inter,sans-serif;color:var(--text);ba
       <div class="row" style="margin-top:12px">
         <button class="btn quiet" id="grantConversationalBtn">Grant conversational</button>
         <button class="btn quiet" id="grantRetentionBtn">Grant retention</button>
+        <button class="btn quiet" id="grantSynthesisBtn">Grant synthesis</button>
+        <button class="btn quiet" id="grantAnnotationBtn">Grant annotation</button>
         <button class="btn quiet" id="refreshWitnessBtn">Refresh Witness State</button>
       </div>
       <div class="meta" id="witnessConsentMeta" style="margin-top:10px">No witness selected.</div>
       <div class="drawer-list" id="witnessTestimonyList" style="margin-top:10px"></div>
+      <div class="meta" id="witnessSynthesisMeta" style="margin-top:14px">No synthesis state loaded.</div>
+      <div class="drawer-list" id="witnessSynthesisList" style="margin-top:10px"></div>
+      <div class="meta" id="witnessAnnotationMeta" style="margin-top:14px">No annotation state loaded.</div>
+      <div class="drawer-list" id="witnessAnnotationList" style="margin-top:10px"></div>
     </div>
   </div>
   <div class="box" id="memoryCard">
@@ -315,17 +321,23 @@ const state={
   latestProvider:null,sessionSearch:"",memorySearch:"",
   sortKey:"updatedAt",sortDir:"desc",archiveFilter:"active",tagFilter:null,
   providerList:[],defaultProvider:null,hasApiKey:false,
-  product:"pes",witnessId:"",witnessConsent:[],witnessTestimony:[],memoryStateFilter:"accepted",
+  product:"pes",witnessId:"",witnessConsent:[],witnessTestimony:[],witnessSynthesis:[],witnessAnnotations:[],memoryStateFilter:"accepted",
   isSending:false,lastError:null,pendingRetry:null,
   previewSnapshot:null,previewMode:null,previewSessionId:null
 };
 
 const PRODUCT_LABELS={pes:"P-E-S",witness:"Witness"};
-const WITNESS_SCOPES=["conversational","retention"];
+const WITNESS_SCOPES=["conversational","retention","synthesis","annotation"];
 
 function productLabel(product){return PRODUCT_LABELS[product||state.product]||"P-E-S"}
 function isWitness(){return state.product==="witness"}
 function activeWitnessId(){return(state.witnessId||$("#witnessIdInput").value||"").trim()}
+function visibleWitnessTestimony(){
+  return state.witnessTestimony.filter(item=>!state.currentSessionId||item.sessionId===state.currentSessionId);
+}
+function activeWitnessTestimony(){
+  return visibleWitnessTestimony().slice().sort((a,b)=>(b.updatedAt||"").localeCompare(a.updatedAt||""))[0]||null;
+}
 function latestWitnessDecision(scope){
   return [...state.witnessConsent]
     .flatMap(record=>(record.decisions||[]).map(decision=>({record,decision})))
@@ -634,6 +646,10 @@ function renderWitnessCard(){
   if(!witnessId){
     $("#witnessConsentMeta").textContent="Enter a witness ID to inspect consent and testimony state.";
     $("#witnessTestimonyList").innerHTML='<div class="meta">No witness selected.</div>';
+    $("#witnessSynthesisMeta").textContent="No synthesis state loaded.";
+    $("#witnessSynthesisList").innerHTML='<div class="meta">No witness selected.</div>';
+    $("#witnessAnnotationMeta").textContent="No annotation state loaded.";
+    $("#witnessAnnotationList").innerHTML='<div class="meta">No witness selected.</div>';
     return;
   }
   const scopeSummary=WITNESS_SCOPES.map(scope=>{
@@ -642,9 +658,13 @@ function renderWitnessCard(){
     return`${scope}: ${latest.decision.status} (${fmt(latest.decision.decidedAt||latest.record.updatedAt)})`;
   }).join(" · ");
   $("#witnessConsentMeta").textContent=`Witness ${witnessId} · ${scopeSummary}`;
-  const testimony=state.witnessTestimony.filter(item=>!state.currentSessionId||item.sessionId===state.currentSessionId);
+  const testimony=visibleWitnessTestimony();
   if(!testimony.length){
     $("#witnessTestimonyList").innerHTML='<div class="meta">No testimony records yet for this witness.</div>';
+    $("#witnessSynthesisMeta").textContent="No active testimony available for synthesis.";
+    $("#witnessSynthesisList").innerHTML='<div class="meta">Create or open a testimony first.</div>';
+    $("#witnessAnnotationMeta").textContent="No active testimony available for annotations.";
+    $("#witnessAnnotationList").innerHTML='<div class="meta">Create or open a testimony first.</div>';
     return;
   }
   $("#witnessTestimonyList").innerHTML=testimony.map(item=>`
@@ -660,15 +680,90 @@ function renderWitnessCard(){
     const id=node.getAttribute("data-open-witness-session");
     if(id)await loadSession(id);
   }));
+
+  const active=activeWitnessTestimony();
+  const synthesis=active?state.witnessSynthesis.filter(item=>item.testimonyId===active.id):[];
+  const annotations=active?state.witnessAnnotations.filter(item=>item.testimonyId===active.id):[];
+
+  $("#witnessSynthesisMeta").textContent=active
+    ? `Synthesis drafts for testimony ${active.id.slice(0,8)}`
+    : "No active testimony available for synthesis.";
+  $("#witnessSynthesisList").innerHTML=active?`
+    <div class="context">
+      <div class="label">Active testimony</div>
+      <div class="value">${esc(active.title||`Session ${active.sessionId.slice(0,8)}`)}</div>
+      <div class="rerun-row" style="margin-top:8px">
+        <button class="btn quiet" data-witness-synthesis-draft="${esc(active.id)}">Draft synthesis</button>
+      </div>
+    </div>
+    ${synthesis.length?synthesis.map(item=>`
+      <div class="context">
+        <div class="label">${esc(item.status)} · ${esc(item.id.slice(0,8))}</div>
+        <div class="value" style="white-space:pre-wrap">${esc(item.text)}</div>
+        <div class="meta">Updated ${fmt(item.updatedAt)}${item.reviewNote?` · ${esc(item.reviewNote)}`:""}</div>
+        ${item.status==="draft"?`<div class="rerun-row" style="margin-top:8px">
+          <button class="btn quiet" data-witness-synthesis-approve="${esc(item.id)}">Approve</button>
+          <button class="btn quiet" data-witness-synthesis-reject="${esc(item.id)}">Reject</button>
+        </div>`:""}
+      </div>`).join(""):'<div class="meta">No synthesis records yet for this testimony.</div>'}
+  `:'<div class="meta">Create or open a testimony first.</div>';
+
+  $("#witnessAnnotationMeta").textContent=active
+    ? `Annotation drafts for testimony ${active.id.slice(0,8)}`
+    : "No active testimony available for annotations.";
+  $("#witnessAnnotationList").innerHTML=active?`
+    <div class="context">
+      <div class="label">Active testimony</div>
+      <div class="value">${esc(active.title||`Session ${active.sessionId.slice(0,8)}`)}</div>
+      <div class="rerun-row" style="margin-top:8px">
+        <button class="btn quiet" data-witness-annotation-draft="${esc(active.id)}">Draft annotations</button>
+      </div>
+    </div>
+    ${annotations.length?annotations.map(item=>`
+      <div class="context">
+        <div class="label">${esc(item.status)} · ${esc(item.id.slice(0,8))}</div>
+        <div class="value">${item.entries.map(entry=>`<div><strong>${esc(entry.labelName)}</strong> · ${esc(entry.quote)}</div>`).join("")}</div>
+        <div class="meta">${item.entries.length} entr${item.entries.length===1?"y":"ies"} · updated ${fmt(item.updatedAt)}${item.reviewNote?` · ${esc(item.reviewNote)}`:""}</div>
+        ${item.status==="draft"?`<div class="rerun-row" style="margin-top:8px">
+          <button class="btn quiet" data-witness-annotation-approve="${esc(item.id)}">Approve</button>
+          <button class="btn quiet" data-witness-annotation-reject="${esc(item.id)}">Reject</button>
+        </div>`:""}
+      </div>`).join(""):'<div class="meta">No annotation records yet for this testimony.</div>'}
+  `:'<div class="meta">Create or open a testimony first.</div>';
+
+  $$("[data-witness-synthesis-draft]").forEach(node=>node.addEventListener("click",async()=>{
+    const testimonyId=node.getAttribute("data-witness-synthesis-draft");
+    if(testimonyId)await requestWitnessSynthesisDraft(testimonyId);
+  }));
+  $$("[data-witness-synthesis-approve]").forEach(node=>node.addEventListener("click",async()=>{
+    const id=node.getAttribute("data-witness-synthesis-approve");
+    if(id)await reviewWitnessRecord("synthesis",id,"approve");
+  }));
+  $$("[data-witness-synthesis-reject]").forEach(node=>node.addEventListener("click",async()=>{
+    const id=node.getAttribute("data-witness-synthesis-reject");
+    if(id)await reviewWitnessRecord("synthesis",id,"reject");
+  }));
+  $$("[data-witness-annotation-draft]").forEach(node=>node.addEventListener("click",async()=>{
+    const testimonyId=node.getAttribute("data-witness-annotation-draft");
+    if(testimonyId)await requestWitnessAnnotationDraft(testimonyId);
+  }));
+  $$("[data-witness-annotation-approve]").forEach(node=>node.addEventListener("click",async()=>{
+    const id=node.getAttribute("data-witness-annotation-approve");
+    if(id)await reviewWitnessRecord("annotations",id,"approve");
+  }));
+  $$("[data-witness-annotation-reject]").forEach(node=>node.addEventListener("click",async()=>{
+    const id=node.getAttribute("data-witness-annotation-reject");
+    if(id)await reviewWitnessRecord("annotations",id,"reject");
+  }));
 }
 
 async function loadWitnessData(){
   if(!isWitness()){
-    state.witnessConsent=[];state.witnessTestimony=[];renderWitnessCard();return;
+    state.witnessConsent=[];state.witnessTestimony=[];state.witnessSynthesis=[];state.witnessAnnotations=[];renderWitnessCard();return;
   }
   const witnessId=activeWitnessId();
   if(!witnessId){
-    state.witnessConsent=[];state.witnessTestimony=[];renderWitnessCard();return;
+    state.witnessConsent=[];state.witnessTestimony=[];state.witnessSynthesis=[];state.witnessAnnotations=[];renderWitnessCard();return;
   }
   try{
     const [consentRes,testimonyRes]=await Promise.all([
@@ -677,8 +772,20 @@ async function loadWitnessData(){
     ]);
     state.witnessConsent=consentRes.ok?await consentRes.json():[];
     state.witnessTestimony=testimonyRes.ok?await testimonyRes.json():[];
+    const synthesisResponses=await Promise.all(state.witnessTestimony.map(item=>
+      fetch(`/api/witness/synthesis?witnessId=${encodeURIComponent(witnessId)}&testimonyId=${encodeURIComponent(item.id)}`)
+        .then(async r=>r.ok?await r.json():[])
+        .catch(()=>[])
+    ));
+    const annotationResponses=await Promise.all(state.witnessTestimony.map(item=>
+      fetch(`/api/witness/annotations?witnessId=${encodeURIComponent(witnessId)}&testimonyId=${encodeURIComponent(item.id)}`)
+        .then(async r=>r.ok?await r.json():[])
+        .catch(()=>[])
+    ));
+    state.witnessSynthesis=synthesisResponses.flat();
+    state.witnessAnnotations=annotationResponses.flat();
   }catch{
-    state.witnessConsent=[];state.witnessTestimony=[];
+    state.witnessConsent=[];state.witnessTestimony=[];state.witnessSynthesis=[];state.witnessAnnotations=[];
   }
   renderWitnessCard();
 }
@@ -686,12 +793,53 @@ async function loadWitnessData(){
 async function grantWitnessConsent(scope){
   const witnessId=activeWitnessId();
   if(!witnessId){setError("Witness mode requires a witness ID before recording consent.");return}
+  const testimonyId=(scope==="synthesis"||scope==="annotation")?activeWitnessTestimony()?.id:undefined;
   const res=await fetch("/api/witness/consent",{
     method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({witnessId,scope,status:"granted",actor:"witness"})
+    body:JSON.stringify({witnessId,testimonyId,scope,status:"granted",actor:"witness"})
   });
   const data=await res.json();
   if(!res.ok){setError(data.error||"Failed to record witness consent.");return}
+  setError("");
+  await loadWitnessData();
+}
+
+async function requestWitnessSynthesisDraft(testimonyId){
+  const provider=$("#providerSelect").value||state.defaultProvider||"mock";
+  const res=await fetch("/api/witness/synthesis/draft",{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({testimonyId,provider})
+  });
+  const data=await res.json();
+  if(!res.ok){setError(data.error||"Failed to draft synthesis",data);return}
+  setError("");
+  await loadWitnessData();
+}
+
+async function requestWitnessAnnotationDraft(testimonyId){
+  const provider=$("#providerSelect").value||state.defaultProvider||"mock";
+  const testimony=state.witnessTestimony.find(item=>item.id===testimonyId);
+  if(!testimony){setError("Unknown testimony for annotation draft.");return}
+  const segmentIds=(testimony.segments||[]).filter(segment=>segment.role==="witness").map(segment=>segment.id);
+  if(!segmentIds.length){setError("Annotation drafts require at least one witness segment.");return}
+  const res=await fetch("/api/witness/annotations/draft",{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({testimonyId,provider,segmentIds})
+  });
+  const data=await res.json();
+  if(!res.ok){setError(data.error||"Failed to draft annotations",data);return}
+  setError("");
+  await loadWitnessData();
+}
+
+async function reviewWitnessRecord(kind,id,action){
+  const note=window.prompt(`Optional note for ${action}?`)||undefined;
+  const res=await fetch(`/api/witness/${kind}/${encodeURIComponent(id)}/${action}`,{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({note})
+  });
+  const data=await res.json();
+  if(!res.ok){setError(data.error||`Failed to ${action} witness ${kind}`);return}
   setError("");
   await loadWitnessData();
 }
@@ -1083,6 +1231,8 @@ $("#refreshSessionsBtn").addEventListener("click",()=>Promise.all([loadSessions(
 $("#refreshMemoryBtn").addEventListener("click",loadMemory);
 $("#grantConversationalBtn").addEventListener("click",()=>grantWitnessConsent("conversational"));
 $("#grantRetentionBtn").addEventListener("click",()=>grantWitnessConsent("retention"));
+$("#grantSynthesisBtn").addEventListener("click",()=>grantWitnessConsent("synthesis"));
+$("#grantAnnotationBtn").addEventListener("click",()=>grantWitnessConsent("annotation"));
 $("#refreshWitnessBtn").addEventListener("click",loadWitnessData);
 $("#sessionSearch").addEventListener("input",e=>{state.sessionSearch=e.target.value;renderSessionList()});
 $("#memorySearch").addEventListener("input",e=>{state.memorySearch=e.target.value;renderMemoryList()});

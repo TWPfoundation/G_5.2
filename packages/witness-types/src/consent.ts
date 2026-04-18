@@ -47,21 +47,37 @@ export function getLatestConsentDecision(
   scope: ConsentScope,
   testimonyId?: string
 ): ConsentDecision | null {
-  const filtered = records
-    .filter((record) => testimonyId === undefined || record.testimonyId === undefined || record.testimonyId === testimonyId)
-    .sort((a, b) => a.updatedAt.localeCompare(b.updatedAt));
+  const filterAndReadLatest = (targetTestimonyId?: string) => {
+    const filtered = records
+      .filter((record) =>
+        targetTestimonyId === undefined
+          ? record.testimonyId === undefined
+          : record.testimonyId === targetTestimonyId
+      )
+      .sort((a, b) => a.updatedAt.localeCompare(b.updatedAt));
 
-  for (let index = filtered.length - 1; index >= 0; index -= 1) {
-    const record = filtered[index];
-    for (let decisionIndex = record.decisions.length - 1; decisionIndex >= 0; decisionIndex -= 1) {
-      const decision = record.decisions[decisionIndex];
-      if (decision.scope === scope) {
-        return decision;
+    for (let index = filtered.length - 1; index >= 0; index -= 1) {
+      const record = filtered[index];
+      for (
+        let decisionIndex = record.decisions.length - 1;
+        decisionIndex >= 0;
+        decisionIndex -= 1
+      ) {
+        const decision = record.decisions[decisionIndex];
+        if (decision.scope === scope) {
+          return decision;
+        }
       }
     }
+
+    return null;
+  };
+
+  if (testimonyId !== undefined) {
+    return filterAndReadLatest(testimonyId) ?? filterAndReadLatest(undefined);
   }
 
-  return null;
+  return filterAndReadLatest(undefined);
 }
 
 export function hasGrantedConsent(
