@@ -169,12 +169,32 @@ test("FileWitnessPublicationBundleStore round-trips bundle records", async () =>
       bundleJsonPath: "data/witness/publication-bundles/bundle-pub.json",
       bundleMarkdownPath: "data/witness/publication-bundles/bundle-pub.md",
     });
+    const createdWithoutMarkdown = await store.create({
+      witnessId: "wit-pub-2",
+      testimonyId: "testimony-pub-2",
+      archiveCandidateId: "candidate-pub-2",
+      sourceTestimonyUpdatedAt: "2026-04-19T09:12:00.000Z",
+      sourceSynthesisId: "synth-pub-2",
+      sourceAnnotationId: "annotation-pub-2",
+      createdAt: "2026-04-19T09:13:00.000Z",
+      bundleJsonPath: "data/witness/publication-bundles/bundle-pub-2.json",
+    });
 
     assert.equal(created.status, "created");
+    assert.equal(createdWithoutMarkdown.bundleMarkdownPath, undefined);
 
     const loaded = await store.load(created.id);
     assert.equal(loaded?.archiveCandidateId, "candidate-pub");
     assert.equal(loaded?.sourceTestimonyUpdatedAt, "2026-04-19T09:10:00.000Z");
+
+    const listed = await store.list();
+    assert.equal(listed.length, 2);
+    assert.equal(listed[0].id, created.id);
+    assert.equal(listed[1].id, createdWithoutMarkdown.id);
+
+    assert.equal(await store.delete(created.id), true);
+    assert.equal(await store.load(created.id), null);
+    assert.equal((await store.list()).length, 1);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
