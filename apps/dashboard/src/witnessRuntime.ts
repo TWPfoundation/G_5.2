@@ -19,3 +19,8 @@ export {
   type WitnessCompensationLogger,
   type WitnessConsentGate,
 } from "../../../packages/orchestration/src/witness/runtime";
+
+export {
+  createWitnessPublicationBundle,
+  type CreateWitnessPublicationBundleInput,
+} from "../../../packages/orchestration/src/witness/publicationRuntime";
