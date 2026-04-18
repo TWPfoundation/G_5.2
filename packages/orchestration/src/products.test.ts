@@ -8,7 +8,7 @@ import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
 import { loadCanon } from "./canon/loadCanon";
 import { validateCanonBoundary } from "./canon/validateCanon";
 import { createProductRegistry, getProductConfig } from "./products";
-import type { PublicationBundleRecord } from "@g52/witness-types";
+import type { PublicationBundleRecord } from "../../witness-types/src/publicationBundle";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
