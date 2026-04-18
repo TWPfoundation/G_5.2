@@ -365,3 +365,120 @@ test("PublicationBundle createWitnessPublicationBundle rejects source records th
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("PublicationBundle createWitnessPublicationBundle rejects referential mismatches between candidate and sources", async () => {
+  const root = await mkdtemp(
+    path.join(os.tmpdir(), "g52-witness-publication-runtime-mismatch-")
+  );
+
+  try {
+    const testimonyStore = new FileWitnessTestimonyStore(path.join(root, "testimony"));
+    const synthesisStore = new FileWitnessSynthesisStore(path.join(root, "synthesis"));
+    const annotationStore = new FileWitnessAnnotationStore(path.join(root, "annotations"));
+    const archiveCandidateStore = new FileWitnessArchiveCandidateStore(path.join(root, "archive"));
+    const publicationBundleStore = new FileWitnessPublicationBundleStore(
+      path.join(root, "bundle-records")
+    );
+
+    const testimony = await testimonyStore.save({
+      id: "testimony-mismatch",
+      witnessId: "wit-mismatch",
+      sessionId: "session-mismatch",
+      state: "sealed",
+      createdAt: "2026-04-19T12:00:00.000Z",
+      updatedAt: "2026-04-19T12:01:00.000Z",
+      segments: [],
+    });
+    const synthesis = await synthesisStore.save({
+      id: "synth-mismatch",
+      witnessId: testimony.witnessId,
+      testimonyId: "different-testimony",
+      createdAt: "2026-04-19T12:02:00.000Z",
+      updatedAt: "2026-04-19T12:02:00.000Z",
+      status: "approved",
+      source: "operator",
+      text: "Approved synthesis",
+    });
+    const annotation = await annotationStore.save({
+      id: "annot-mismatch",
+      witnessId: testimony.witnessId,
+      testimonyId: testimony.id,
+      createdAt: "2026-04-19T12:03:00.000Z",
+      updatedAt: "2026-04-19T12:03:00.000Z",
+      status: "approved",
+      source: "operator",
+      entries: [],
+    });
+    const archiveCandidate = await archiveCandidateStore.save({
+      id: "candidate-mismatch",
+      witnessId: testimony.witnessId,
+      testimonyId: testimony.id,
+      testimonyUpdatedAt: "2026-04-19T12:01:00.000Z",
+      approvedSynthesisId: synthesis.id,
+      approvedAnnotationId: annotation.id,
+      createdAt: "2026-04-19T12:04:00.000Z",
+      updatedAt: "2026-04-19T12:04:00.000Z",
+      status: "publication_ready",
+    });
+
+    await assert.rejects(
+      () =>
+        createWitnessPublicationBundle({
+          publicationBundleRoot: path.join(root, "bundle-exports"),
+          archiveCandidateId: archiveCandidate.id,
+          testimonyStore,
+          synthesisStore,
+          annotationStore,
+          archiveCandidateStore,
+          publicationBundleStore,
+        }),
+      /synthesis.*candidate/i
+    );
+
+    await synthesisStore.save({
+      ...synthesis,
+      testimonyId: testimony.id,
+      witnessId: "different-witness",
+    });
+
+    await assert.rejects(
+      () =>
+        createWitnessPublicationBundle({
+          publicationBundleRoot: path.join(root, "bundle-exports"),
+          archiveCandidateId: archiveCandidate.id,
+          testimonyStore,
+          synthesisStore,
+          annotationStore,
+          archiveCandidateStore,
+          publicationBundleStore,
+        }),
+      /witness id.*candidate/i
+    );
+
+    await synthesisStore.save({
+      ...synthesis,
+      testimonyId: testimony.id,
+      witnessId: testimony.witnessId,
+    });
+    await annotationStore.save({
+      ...annotation,
+      testimonyId: "different-testimony",
+    });
+
+    await assert.rejects(
+      () =>
+        createWitnessPublicationBundle({
+          publicationBundleRoot: path.join(root, "bundle-exports"),
+          archiveCandidateId: archiveCandidate.id,
+          testimonyStore,
+          synthesisStore,
+          annotationStore,
+          archiveCandidateStore,
+          publicationBundleStore,
+        }),
+      /annotation.*candidate/i
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});

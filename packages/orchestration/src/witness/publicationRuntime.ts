@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { AnnotationRecord } from "../../../witness-types/src/annotation";
@@ -134,6 +134,39 @@ function buildPublicationBundlePayload(
   };
 }
 
+function assertSourceRecordConsistency(
+  archiveCandidate: ArchiveCandidateRecord,
+  testimony: TestimonyRecord,
+  synthesis: SynthesisRecord,
+  annotation: AnnotationRecord
+) {
+  if (testimony.witnessId !== archiveCandidate.witnessId) {
+    throw new Error(
+      "Witness publication bundle testimony witness id must match the archive candidate."
+    );
+  }
+  if (synthesis.testimonyId !== archiveCandidate.testimonyId) {
+    throw new Error(
+      "Witness publication bundle synthesis testimony id must match the archive candidate."
+    );
+  }
+  if (synthesis.witnessId !== archiveCandidate.witnessId) {
+    throw new Error(
+      "Witness publication bundle synthesis witness id must match the archive candidate."
+    );
+  }
+  if (annotation.testimonyId !== archiveCandidate.testimonyId) {
+    throw new Error(
+      "Witness publication bundle annotation testimony id must match the archive candidate."
+    );
+  }
+  if (annotation.witnessId !== archiveCandidate.witnessId) {
+    throw new Error(
+      "Witness publication bundle annotation witness id must match the archive candidate."
+    );
+  }
+}
+
 function buildPublicationBundleMarkdown(
   payload: WitnessPublicationBundlePayload
 ): string {
@@ -174,6 +207,12 @@ export async function createWitnessPublicationBundle(
     input.annotationStore,
     archiveCandidate.approvedAnnotationId
   );
+  assertSourceRecordConsistency(
+    archiveCandidate,
+    testimony,
+    synthesis,
+    annotation
+  );
 
   const payload = buildPublicationBundlePayload(
     testimony,
@@ -198,16 +237,23 @@ export async function createWitnessPublicationBundle(
     `${buildPublicationBundleMarkdown(payload)}\n`,
     "utf8"
   );
-
-  return input.publicationBundleStore.create({
-    witnessId: testimony.witnessId,
-    testimonyId: testimony.id,
-    archiveCandidateId: archiveCandidate.id,
-    sourceTestimonyUpdatedAt: archiveCandidate.testimonyUpdatedAt,
-    sourceSynthesisId: synthesis.id,
-    sourceAnnotationId: annotation.id,
-    createdAt: new Date().toISOString(),
-    bundleJsonPath,
-    bundleMarkdownPath,
-  });
+  try {
+    return await input.publicationBundleStore.create({
+      witnessId: testimony.witnessId,
+      testimonyId: testimony.id,
+      archiveCandidateId: archiveCandidate.id,
+      sourceTestimonyUpdatedAt: archiveCandidate.testimonyUpdatedAt,
+      sourceSynthesisId: synthesis.id,
+      sourceAnnotationId: annotation.id,
+      createdAt: new Date().toISOString(),
+      bundleJsonPath,
+      bundleMarkdownPath,
+    });
+  } catch (error) {
+    await Promise.allSettled([
+      rm(bundleJsonPath),
+      rm(bundleMarkdownPath),
+    ]);
+    throw error;
+  }
 }
