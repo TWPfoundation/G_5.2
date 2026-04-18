@@ -33,7 +33,8 @@ Optional:
 ```bash
 cp .env.example .env
 # Set OPENROUTER_API_KEY for real provider runs.
-# Set EVAL_PROVIDER=openai|anthropic|gemini (defaults to gemini) for evals.
+# Set AZURE_OPENAI_* for direct Azure runs.
+# Set EVAL_PROVIDER=azure|openai|anthropic|gemini (Azure is preferred when configured).
 ```
 
 If any of `validate:canon`, `validate:witness`, `typecheck`, `test`, or `smoke` fails on a clean clone, do not proceed. File a fix before running anything else.
@@ -146,7 +147,7 @@ pnpm evals -- --trace
 pnpm evals -- canon voice-001
 
 # Switch provider:
-EVAL_PROVIDER=openai pnpm evals
+EVAL_PROVIDER=azure pnpm evals
 ```
 
 Exit codes:

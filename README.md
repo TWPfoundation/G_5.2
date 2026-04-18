@@ -98,10 +98,15 @@ Default environment variables:
 - `DASHBOARD_PORT` — dashboard port, default `5000`
 - `DASHBOARD_HOST` — bind host, default `0.0.0.0`
 - `OPENROUTER_API_KEY` — required for live inquiry turns
-- `OPENROUTER_DEFAULT_MODEL` / `OPENROUTER_OPENAI_MODEL` — primary OpenAI model slug, typically `openai/gpt-5.4`
+- `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_DEPLOYMENT_NAME`, `AZURE_OPENAI_API_VERSION` — direct Azure OpenAI configuration for the preferred `azure` provider path
+- `AZURE_OPENAI_DEFAULT_MODEL` — display/model label for the Azure deployment, typically `gpt-5.4`
+- `OPENROUTER_DEFAULT_MODEL` / `OPENROUTER_OPENAI_MODEL` — OpenRouter fallback model slug; pin an exact dated slug like `openai/gpt-5.4-20260305` when you want fallback runs to be reproducible
 - `OPENROUTER_SECONDARY_MODEL` — lighter OpenAI model slug, typically `openai/gpt-5.4-mini`
-- `OPENROUTER_IGNORE_PROVIDERS` — set to `none` to allow Azure BYOK routing on OpenRouter
-- `EVAL_PROVIDER` — default live provider: `openai`, `openai-secondary`, `anthropic`, or `gemini`
+- `OPENROUTER_OPENAI_PROVIDER_ORDER` — OpenRouter routing preference for OpenAI fallback requests; `azure,openai` keeps Azure first without making the fallback path redundant
+- `OPENROUTER_OPENAI_PROVIDER_IGNORE` — provider ignore list for OpenAI requests; `OPENROUTER_IGNORE_PROVIDERS` remains as a legacy alias
+- `OPENROUTER_OPENAI_ALLOW_FALLBACKS` — whether OpenRouter may fall back beyond the preferred OpenAI provider selection
+- `OPENROUTER_OPENAI_MAX_COMPLETION_TOKENS` — cap for OpenRouter OpenAI fallback completion tokens; set this below the current affordability ceiling when needed
+- `EVAL_PROVIDER` — default live provider: `azure`, `openai`, `openai-secondary`, `anthropic`, or `gemini`
 - `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY` — optional direct provider keys
 
 Primary operator surfaces:

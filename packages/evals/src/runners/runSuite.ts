@@ -1,6 +1,7 @@
 import type { EvalCase, EvalResult } from "../types";
 import type { ModelProvider } from "../../../orchestration/src/types/providers";
 import type { ProductRegistry } from "../../../orchestration/src/products";
+import { describeProvider } from "../../../orchestration/src/providers/label";
 import { runCase } from "./runCase";
 import { printResult } from "../reporters/consoleReporter";
 
@@ -51,12 +52,11 @@ export async function runSuite({
     printResult(result);
   }
 
-  const modelName =
-    (provider as { model?: string }).model ?? "unknown";
+  const providerLabel = describeProvider(provider);
 
   return {
     results,
-    providerName: provider.name,
-    modelName,
+    providerName: providerLabel.name,
+    modelName: providerLabel.model,
   };
 }

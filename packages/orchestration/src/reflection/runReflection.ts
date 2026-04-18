@@ -4,6 +4,7 @@ import {
   buildReflectionDraftPrompt,
   buildReflectionRevisePrompt,
 } from "../pipeline/prompts/reflectionPrompts";
+import { describeProvider } from "../providers/label";
 import type { ModelProvider } from "../types/providers";
 import type { ReflectionTopic, ReflectionRun } from "../schemas/reflection";
 import { readCanonVersion } from "./canonVersion";
@@ -68,6 +69,7 @@ export async function runReflection(
   const revision = revisionResult.text;
 
   const completedAt = new Date().toISOString();
+  const providerLabel = describeProvider(provider, revisionResult.model ?? "unknown");
 
   return {
     run: {
@@ -75,13 +77,7 @@ export async function runReflection(
       startedAt,
       completedAt,
       status: "completed",
-      provider: {
-        name: provider.name,
-        model:
-          (provider as { model?: string }).model ??
-          revisionResult.model ??
-          "unknown",
-      },
+      provider: providerLabel,
       canonVersion,
       draft,
       critique,

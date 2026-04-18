@@ -76,6 +76,8 @@ import {
   isKnownProviderName,
   providerByName,
 } from "../../../packages/orchestration/src/providers/byName";
+import { getAzureOpenAIConfig } from "../../../packages/orchestration/src/providers/azure";
+import { describeProvider } from "../../../packages/orchestration/src/providers/label";
 import { runSessionTurn } from "../../../packages/orchestration/src/sessions/runSessionTurn";
 import { buildContext } from "../../../packages/orchestration/src/pipeline/buildContext";
 import { runCompareTurn } from "../../../packages/orchestration/src/sessions/runCompareTurn";
@@ -566,17 +568,23 @@ export async function handleRequest(
   }
 
   if (url.pathname === "/api/providers") {
-    const hasKey = Boolean(process.env.OPENROUTER_API_KEY);
+    const hasLiveProvider = Boolean(
+      process.env.OPENROUTER_API_KEY || getAzureOpenAIConfig()
+    );
     const envDefault = providerFromEnv();
+    const defaultProvider = describeProvider(envDefault);
+    const available = hasLiveProvider
+      ? [
+          ...(getAzureOpenAIConfig() ? ["azure"] : []),
+          ...(process.env.OPENROUTER_API_KEY
+            ? ["openai", "openai-secondary", "anthropic", "gemini"]
+            : []),
+        ]
+      : ["mock"];
     sendJson(res, 200, {
-      hasApiKey: hasKey,
-      defaultProvider: {
-        name: envDefault.name,
-        model: (envDefault as { model?: string }).model ?? "unknown",
-      },
-      available: hasKey
-        ? ["openai", "openai-secondary", "anthropic", "gemini"]
-        : ["mock"],
+      hasApiKey: hasLiveProvider,
+      defaultProvider,
+      available,
     });
     return;
   }
@@ -1120,10 +1128,7 @@ export async function handleRequest(
     const provider = providerName
       ? providerByName(providerName)
       : providerFromEnv();
-    const providerLabel = {
-      name: provider.name,
-      model: (provider as { model?: string }).model ?? "unknown",
-    };
+    let providerLabel = describeProvider(provider);
 
     try {
       if (product.id === "witness") {
@@ -1153,6 +1158,7 @@ export async function handleRequest(
           userMessage: body.userMessage.trim(),
         })
       );
+      providerLabel = describeProvider(provider);
 
       let testimonyId: string | null = null;
       if (product.id === "witness") {

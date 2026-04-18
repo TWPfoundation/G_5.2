@@ -19,11 +19,12 @@ No LLM-as-judge layer is used.
 ```bash
 pnpm evals
 pnpm evals -- --trace
+EVAL_PROVIDER=azure pnpm evals -- witness
 EVAL_PROVIDER=openai pnpm evals -- canon
 pnpm --filter @g52/evals dev -- --trace
 ```
 
-If `OPENROUTER_API_KEY` is unset, evals fall back to `MockProvider` and print a warning.
+If neither Azure nor OpenRouter credentials are configured, evals fall back to `MockProvider` and print a warning.
 
 ## Reports
 

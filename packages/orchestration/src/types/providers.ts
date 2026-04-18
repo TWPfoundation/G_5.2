@@ -5,6 +5,11 @@ export interface GenerateTextInput {
   model?: string;
 }
 
+export interface ProviderLabel {
+  name: string;
+  model: string;
+}
+
 export interface GenerateTextOutput {
   text: string;
   provider: string;
@@ -14,4 +19,5 @@ export interface GenerateTextOutput {
 export interface ModelProvider {
   name: string;
   generateText(input: GenerateTextInput): Promise<GenerateTextOutput>;
+  getLabel?(): ProviderLabel;
 }

@@ -4,19 +4,21 @@
  * Allows the dashboard to override the env-selected provider per request,
  * which powers rerun / compare-by-provider on the inquiry surface.
  *
- * Recognised names: "openai", "openai-secondary", "anthropic", "gemini", "mock".
+ * Recognised names: "azure", "openai", "openai-secondary", "anthropic", "gemini", "mock".
  * Any unknown name falls back to providerFromEnv().
- * If OPENROUTER_API_KEY is missing, always returns MockProvider.
+ * If neither Azure nor OpenRouter config is present, returns MockProvider.
  */
 
 import type { ModelProvider } from "../types/providers";
 import { MockProvider } from "./mock";
+import { AzureOpenAIProvider, getAzureOpenAIConfig } from "./azure";
 import { OpenAIProvider, OpenAISecondaryProvider } from "./openai";
 import { AnthropicProvider } from "./anthropic";
 import { GeminiProvider } from "./gemini";
 import { providerFromEnv } from "./fromEnv";
 
 export const KNOWN_PROVIDER_NAMES = [
+  "azure",
   "openai",
   "openai-secondary",
   "anthropic",
@@ -46,8 +48,15 @@ export function providerByName(name: string | undefined | null): ModelProvider {
     return new MockProvider();
   }
 
-  if (!process.env.OPENROUTER_API_KEY) {
+  const hasAzure = Boolean(getAzureOpenAIConfig());
+  const hasOpenRouter = Boolean(process.env.OPENROUTER_API_KEY);
+
+  if (!hasAzure && !hasOpenRouter) {
     return new MockProvider();
+  }
+
+  if (normalized === "azure") {
+    return new AzureOpenAIProvider();
   }
 
   if (normalized === "openai") {

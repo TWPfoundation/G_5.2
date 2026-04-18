@@ -10,8 +10,8 @@ Before starting:
 
 - [ ] Working tree is clean (no uncommitted edits to canon, prompts, or pipeline).
 - [ ] `pnpm install && pnpm validate:canon && pnpm validate:witness && pnpm typecheck && pnpm test && pnpm smoke` all pass on the candidate commit.
-- [ ] `OPENROUTER_API_KEY` is set in the shell.
-- [ ] You know which providers are in scope. As of v1, the supported set is `anthropic`, `openai`, `gemini`. Anything else needs a separate decision.
+- [ ] Live provider credentials are set in the shell for the providers you intend to baseline (`AZURE_OPENAI_*` for Azure, `OPENROUTER_API_KEY` for OpenRouter-backed providers).
+- [ ] You know which providers are in scope. As of v1, the supported set is `azure`, `anthropic`, `openai`, `gemini`. Anything else needs a separate decision.
 
 ## 2. Per-provider RC run
 

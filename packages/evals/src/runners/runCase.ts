@@ -11,6 +11,7 @@ import type { ModelProvider } from "../../../orchestration/src/types/providers";
 import type { ProductRegistry } from "../../../orchestration/src/products";
 import { runTurn } from "../../../orchestration/src/pipeline/runTurn";
 import { parseMemoryFixture } from "../../../orchestration/src/persistence/migrations";
+import { describeProvider } from "../../../orchestration/src/providers/label";
 import { assertMatchesAny } from "../assertions/matchesAny";
 import { assertContainsAll } from "../assertions/containsAll";
 import { assertContainsNone } from "../assertions/containsNone";
@@ -249,6 +250,7 @@ export async function runCase({
     ...evaluateAssertions(output, trace, evalCase),
     ...evaluateRuntimeAssertions(runtimeObservation, evalCase.runtimeAssertions),
   ];
+  const providerLabel = describeProvider(provider);
 
   return {
     id: evalCase.id,
@@ -259,8 +261,8 @@ export async function runCase({
     passed: failures.length === 0,
     failures,
     output,
-    provider: provider.name,
-    model: (provider as { model?: string }).model ?? "unknown",
+    provider: providerLabel.name,
+    model: providerLabel.model,
     ...(captureTrace ? { trace } : {}),
   };
 }

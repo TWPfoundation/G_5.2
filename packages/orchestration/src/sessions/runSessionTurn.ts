@@ -14,6 +14,7 @@ import type {
 import { FileMemoryStore } from "../memory/fileMemoryStore";
 import { runTurn } from "../pipeline/runTurn";
 import { PIPELINE_REVISION, PROMPT_REVISION } from "../pipeline/revision";
+import { describeProvider } from "../providers/label";
 import { truncateToTokens } from "../utils/budget";
 import {
   defaultContextSnapshotRoot,
@@ -217,10 +218,7 @@ export async function runSessionTurn(
     storedItems.push(await memoryStore.upsert(candidate, memorySource));
   }
 
-  const providerLabel = {
-    name: provider.name,
-    model: (provider as { model?: string }).model ?? "unknown",
-  };
+  const providerLabel = describeProvider(provider);
 
   const memoryDecision = finalizeMemoryDecision(turn.memoryDecision, storedItems);
   const inlineSnapshot = buildContextSnapshot(turn.context);
@@ -256,8 +254,8 @@ export async function runSessionTurn(
   await snapshotStore.save(persistedSnapshot);
 
   const runMetadata: RunMetadata = {
-    provider: provider.name,
-    model: (provider as { model?: string }).model ?? "unknown",
+    provider: providerLabel.name,
+    model: providerLabel.model,
     canonVersion: String(canon.manifest.version),
     canonLastUpdated: canon.manifest.last_updated ?? null,
     promptRevision: PROMPT_REVISION,

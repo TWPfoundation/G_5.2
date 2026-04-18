@@ -33,12 +33,13 @@ With no `OPENROUTER_API_KEY`, the smoke test falls back to `MockProvider`.
 ## Provider Wiring
 
 Current provider classes:
+- `AzureOpenAIProvider` -> direct Azure OpenAI first, with OpenRouter OpenAI fallback when configured
 - `OpenAIProvider` -> OpenRouter (`openai/gpt-5.4` by default)
 - `AnthropicProvider` -> OpenRouter (`anthropic/claude-sonnet-4.6` by default)
 - `GeminiProvider` -> OpenRouter (`google/gemini-3.1-pro-preview-20260219` by default)
 - `MockProvider` -> deterministic local fallback for offline/dev inspection
 
-Provider selection is environment-driven via `providerFromEnv()`, with Gemini as the default preference when `EVAL_PROVIDER` is unset.
+Provider selection is environment-driven via `providerFromEnv()`, with `azure` as the default preference when Azure config is present and `EVAL_PROVIDER` is unset.
 
 ## Pipeline Shape
 
@@ -47,4 +48,3 @@ buildContext -> draftResponse -> critiqueResponse -> reviseResponse -> decideMem
 ```
 
 Session persistence and durable-memory storage now sit one layer above the core turn pipeline through `runSessionTurn()`. Durable memory remains selective, file-backed, and lower priority than canon, continuity, session summaries, and recent turns.
-

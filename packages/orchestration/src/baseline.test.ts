@@ -263,6 +263,63 @@ test("providerFromEnv supports openai-secondary", () => {
   }
 });
 
+test("providerFromEnv supports azure", () => {
+  const originalKey = process.env.OPENROUTER_API_KEY;
+  const originalProvider = process.env.EVAL_PROVIDER;
+  const originalAzureEndpoint = process.env.AZURE_OPENAI_ENDPOINT;
+  const originalAzureKey = process.env.AZURE_OPENAI_API_KEY;
+  const originalAzureDeployment = process.env.AZURE_OPENAI_DEPLOYMENT_NAME;
+  const originalAzureVersion = process.env.AZURE_OPENAI_API_VERSION;
+
+  process.env.OPENROUTER_API_KEY = "test-key";
+  process.env.EVAL_PROVIDER = "azure";
+  process.env.AZURE_OPENAI_ENDPOINT = "https://example.openai.azure.com/";
+  process.env.AZURE_OPENAI_API_KEY = "azure-test-key";
+  process.env.AZURE_OPENAI_DEPLOYMENT_NAME = "gpt-5.4";
+  process.env.AZURE_OPENAI_API_VERSION = "2024-02-01";
+
+  try {
+    const provider = providerFromEnv();
+    assert.equal(provider.name, "azure");
+  } finally {
+    if (originalKey === undefined) {
+      delete process.env.OPENROUTER_API_KEY;
+    } else {
+      process.env.OPENROUTER_API_KEY = originalKey;
+    }
+
+    if (originalProvider === undefined) {
+      delete process.env.EVAL_PROVIDER;
+    } else {
+      process.env.EVAL_PROVIDER = originalProvider;
+    }
+
+    if (originalAzureEndpoint === undefined) {
+      delete process.env.AZURE_OPENAI_ENDPOINT;
+    } else {
+      process.env.AZURE_OPENAI_ENDPOINT = originalAzureEndpoint;
+    }
+
+    if (originalAzureKey === undefined) {
+      delete process.env.AZURE_OPENAI_API_KEY;
+    } else {
+      process.env.AZURE_OPENAI_API_KEY = originalAzureKey;
+    }
+
+    if (originalAzureDeployment === undefined) {
+      delete process.env.AZURE_OPENAI_DEPLOYMENT_NAME;
+    } else {
+      process.env.AZURE_OPENAI_DEPLOYMENT_NAME = originalAzureDeployment;
+    }
+
+    if (originalAzureVersion === undefined) {
+      delete process.env.AZURE_OPENAI_API_VERSION;
+    } else {
+      process.env.AZURE_OPENAI_API_VERSION = originalAzureVersion;
+    }
+  }
+});
+
 test("providerByName resolves openai-secondary", () => {
   const originalKey = process.env.OPENROUTER_API_KEY;
   process.env.OPENROUTER_API_KEY = "test-key";
@@ -275,6 +332,55 @@ test("providerByName resolves openai-secondary", () => {
       delete process.env.OPENROUTER_API_KEY;
     } else {
       process.env.OPENROUTER_API_KEY = originalKey;
+    }
+  }
+});
+
+test("providerByName resolves azure", () => {
+  const originalKey = process.env.OPENROUTER_API_KEY;
+  const originalAzureEndpoint = process.env.AZURE_OPENAI_ENDPOINT;
+  const originalAzureKey = process.env.AZURE_OPENAI_API_KEY;
+  const originalAzureDeployment = process.env.AZURE_OPENAI_DEPLOYMENT_NAME;
+  const originalAzureVersion = process.env.AZURE_OPENAI_API_VERSION;
+
+  process.env.OPENROUTER_API_KEY = "test-key";
+  process.env.AZURE_OPENAI_ENDPOINT = "https://example.openai.azure.com/";
+  process.env.AZURE_OPENAI_API_KEY = "azure-test-key";
+  process.env.AZURE_OPENAI_DEPLOYMENT_NAME = "gpt-5.4";
+  process.env.AZURE_OPENAI_API_VERSION = "2024-02-01";
+
+  try {
+    const provider = providerByName("azure");
+    assert.equal(provider.name, "azure");
+  } finally {
+    if (originalKey === undefined) {
+      delete process.env.OPENROUTER_API_KEY;
+    } else {
+      process.env.OPENROUTER_API_KEY = originalKey;
+    }
+
+    if (originalAzureEndpoint === undefined) {
+      delete process.env.AZURE_OPENAI_ENDPOINT;
+    } else {
+      process.env.AZURE_OPENAI_ENDPOINT = originalAzureEndpoint;
+    }
+
+    if (originalAzureKey === undefined) {
+      delete process.env.AZURE_OPENAI_API_KEY;
+    } else {
+      process.env.AZURE_OPENAI_API_KEY = originalAzureKey;
+    }
+
+    if (originalAzureDeployment === undefined) {
+      delete process.env.AZURE_OPENAI_DEPLOYMENT_NAME;
+    } else {
+      process.env.AZURE_OPENAI_DEPLOYMENT_NAME = originalAzureDeployment;
+    }
+
+    if (originalAzureVersion === undefined) {
+      delete process.env.AZURE_OPENAI_API_VERSION;
+    } else {
+      process.env.AZURE_OPENAI_API_VERSION = originalAzureVersion;
     }
   }
 });

@@ -18,7 +18,10 @@ import type {
   GenerateTextOutput,
   ModelProvider,
 } from "../types/providers";
-import { openRouterGenerate } from "./openrouter";
+import {
+  openRouterGenerate,
+  type OpenRouterProviderRouting,
+} from "./openrouter";
 
 export function getDefaultOpenAIModel(): string {
   return (
@@ -32,14 +35,93 @@ export function getSecondaryOpenAIModel(): string {
   return process.env.OPENROUTER_SECONDARY_MODEL ?? "openai/gpt-5.4-mini";
 }
 
-function getIgnoredProviders(): string[] {
-  const raw = process.env.OPENROUTER_IGNORE_PROVIDERS ?? "none";
-  return raw.toLowerCase() === "none"
-    ? []
-    : raw
-        .split(",")
-        .map((provider) => provider.trim())
-        .filter(Boolean);
+export function getOpenAIMaxCompletionTokens(): number | undefined {
+  const raw =
+    process.env.OPENROUTER_OPENAI_MAX_COMPLETION_TOKENS ??
+    process.env.OPENROUTER_MAX_COMPLETION_TOKENS;
+
+  if (!raw) {
+    return undefined;
+  }
+
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+function parseProviderList(
+  raw: string | undefined,
+  noneSentinel = true
+): string[] | undefined {
+  if (!raw) {
+    return undefined;
+  }
+
+  if (noneSentinel && raw.trim().toLowerCase() === "none") {
+    return undefined;
+  }
+
+  const parsed = raw
+    .split(",")
+    .map((provider) => provider.trim())
+    .filter(Boolean);
+
+  return parsed.length > 0 ? parsed : undefined;
+}
+
+function parseBooleanEnv(raw: string | undefined): boolean | undefined {
+  if (raw === undefined) {
+    return undefined;
+  }
+
+  const normalized = raw.trim().toLowerCase();
+  if (normalized === "true") {
+    return true;
+  }
+  if (normalized === "false") {
+    return false;
+  }
+
+  return undefined;
+}
+
+function parseDataCollection(
+  raw: string | undefined
+): OpenRouterProviderRouting["dataCollection"] | undefined {
+  if (!raw) {
+    return undefined;
+  }
+
+  const normalized = raw.trim().toLowerCase();
+  if (normalized === "allow" || normalized === "deny") {
+    return normalized;
+  }
+
+  return undefined;
+}
+
+export function getOpenAIProviderRouting(): OpenRouterProviderRouting | undefined {
+  const routing: OpenRouterProviderRouting = {
+    only: parseProviderList(process.env.OPENROUTER_OPENAI_PROVIDER_ONLY, false),
+    order: parseProviderList(process.env.OPENROUTER_OPENAI_PROVIDER_ORDER, false),
+    ignore: parseProviderList(
+      process.env.OPENROUTER_OPENAI_PROVIDER_IGNORE ??
+        process.env.OPENROUTER_IGNORE_PROVIDERS
+    ),
+    allowFallbacks: parseBooleanEnv(
+      process.env.OPENROUTER_OPENAI_ALLOW_FALLBACKS
+    ),
+    requireParameters: parseBooleanEnv(
+      process.env.OPENROUTER_OPENAI_REQUIRE_PARAMETERS
+    ),
+    dataCollection: parseDataCollection(
+      process.env.OPENROUTER_OPENAI_DATA_COLLECTION
+    ),
+    zdr: parseBooleanEnv(process.env.OPENROUTER_OPENAI_ZDR),
+  };
+
+  return Object.values(routing).some((value) => value !== undefined)
+    ? routing
+    : undefined;
 }
 
 export class OpenAIProvider implements ModelProvider {
@@ -55,8 +137,16 @@ export class OpenAIProvider implements ModelProvider {
       input.model ?? this.model,
       input,
       this.name,
-      getIgnoredProviders()
+      getOpenAIProviderRouting(),
+      getOpenAIMaxCompletionTokens()
     );
+  }
+
+  getLabel() {
+    return {
+      name: this.name,
+      model: this.model,
+    };
   }
 }
 
@@ -73,7 +163,15 @@ export class OpenAISecondaryProvider implements ModelProvider {
       input.model ?? this.model,
       input,
       this.name,
-      getIgnoredProviders()
+      getOpenAIProviderRouting(),
+      getOpenAIMaxCompletionTokens()
     );
+  }
+
+  getLabel() {
+    return {
+      name: this.name,
+      model: this.model,
+    };
   }
 }

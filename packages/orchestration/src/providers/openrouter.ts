@@ -32,6 +32,16 @@ interface OpenRouterResponse {
   error?: { message: string; code?: string };
 }
 
+export interface OpenRouterProviderRouting {
+  order?: string[];
+  only?: string[];
+  ignore?: string[];
+  allowFallbacks?: boolean;
+  requireParameters?: boolean;
+  dataCollection?: "allow" | "deny";
+  zdr?: boolean;
+}
+
 function getApiKey(): string {
   const key = process.env.OPENROUTER_API_KEY;
   if (!key) {
@@ -43,13 +53,55 @@ function getApiKey(): string {
   return key;
 }
 
+export function buildOpenRouterProviderPayload(
+  routing?: OpenRouterProviderRouting
+): Record<string, unknown> | undefined {
+  if (!routing) {
+    return undefined;
+  }
+
+  const payload: Record<string, unknown> = {};
+
+  if (routing.order && routing.order.length > 0) {
+    payload.order = routing.order;
+  }
+
+  if (routing.only && routing.only.length > 0) {
+    payload.only = routing.only;
+  }
+
+  if (routing.ignore && routing.ignore.length > 0) {
+    payload.ignore = routing.ignore;
+  }
+
+  if (routing.allowFallbacks !== undefined) {
+    payload.allow_fallbacks = routing.allowFallbacks;
+  }
+
+  if (routing.requireParameters !== undefined) {
+    payload.require_parameters = routing.requireParameters;
+  }
+
+  if (routing.dataCollection !== undefined) {
+    payload.data_collection = routing.dataCollection;
+  }
+
+  if (routing.zdr !== undefined) {
+    payload.zdr = routing.zdr;
+  }
+
+  return Object.keys(payload).length > 0 ? payload : undefined;
+}
+
 export async function openRouterGenerate(
   model: string,
   input: GenerateTextInput,
   providerName: string,
-  ignoreProviders?: string[]
+  routing?: OpenRouterProviderRouting,
+  maxCompletionTokens?: number
 ): Promise<GenerateTextOutput> {
   const apiKey = getApiKey();
+  const providerPayload = buildOpenRouterProviderPayload(routing);
 
   const body: Record<string, unknown> = {
     model,
@@ -60,9 +112,10 @@ export async function openRouterGenerate(
     ...(input.temperature !== undefined
       ? { temperature: input.temperature }
       : {}),
-    ...(ignoreProviders && ignoreProviders.length > 0
-      ? { provider: { ignore: ignoreProviders } }
+    ...(maxCompletionTokens !== undefined
+      ? { max_completion_tokens: maxCompletionTokens }
       : {}),
+    ...(providerPayload ? { provider: providerPayload } : {}),
   };
 
   const response = await fetch(`${BASE_URL}/chat/completions`, {
