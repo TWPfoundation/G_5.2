@@ -979,3 +979,52 @@ test("publication bundle endpoints return 400 and 404 for missing or unknown ide
   });
   assert.equal(created.response.status, 404);
 });
+
+test("publication bundle creation returns 400 for non-string archiveCandidateId bodies", async () => {
+  const created = await requestJson("/api/witness/publication-bundles", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      archiveCandidateId: 123,
+    }),
+  });
+
+  assert.equal(created.response.status, 400);
+  assert.equal(created.json?.error, "archiveCandidateId is required");
+});
+
+test("publication bundle creation returns 500 when a required source artifact is missing", async () => {
+  const witnessId = `wit-${randomUUID()}`;
+  let sessionId: string | undefined;
+  let turnId: string | undefined;
+
+  try {
+    const setup = await createPublicationReadyArchiveCandidate(witnessId);
+    sessionId = setup.sessionId;
+    turnId = setup.turnId;
+
+    const archiveCandidateStore = new FileWitnessArchiveCandidateStore(
+      registry.witness.archiveCandidateRoot!
+    );
+    const synthesisStore = new FileWitnessSynthesisStore(
+      registry.witness.synthesisRoot!
+    );
+    const candidate = await archiveCandidateStore.load(setup.archiveCandidateId);
+    assert.ok(candidate);
+
+    await synthesisStore.delete(candidate!.approvedSynthesisId);
+
+    const created = await requestJson("/api/witness/publication-bundles", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        archiveCandidateId: setup.archiveCandidateId,
+      }),
+    });
+
+    assert.equal(created.response.status, 500);
+    assert.match(created.json?.error ?? "", /Unknown synthesis record/i);
+  } finally {
+    await cleanupWitnessArtifacts(witnessId, sessionId, turnId);
+  }
+});

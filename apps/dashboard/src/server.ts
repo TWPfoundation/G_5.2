@@ -1828,13 +1828,17 @@ export async function handleRequest(
   ) {
     try {
       const body = (await readJsonBody(req)) as { archiveCandidateId?: string };
-      if (!body.archiveCandidateId?.trim()) {
+      const archiveCandidateId =
+        typeof body.archiveCandidateId === "string"
+          ? body.archiveCandidateId.trim()
+          : "";
+      if (!archiveCandidateId) {
         sendJson(res, 400, { error: "archiveCandidateId is required" });
         return;
       }
       const created = await createWitnessPublicationBundle({
         publicationBundleRoot: WITNESS_CONFIG.publicationBundleRoot!,
-        archiveCandidateId: body.archiveCandidateId.trim(),
+        archiveCandidateId,
         testimonyStore: testimonyStoreFor(WITNESS_CONFIG),
         synthesisStore: synthesisStoreFor(WITNESS_CONFIG),
         annotationStore: annotationStoreFor(WITNESS_CONFIG),
@@ -1845,9 +1849,7 @@ export async function handleRequest(
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       const status =
-        /Unknown archive candidate|Unknown testimony|Unknown synthesis|Unknown annotation/.test(
-          message
-        )
+        /Unknown archive candidate/.test(message)
           ? 404
           : /publication_ready archive candidate|sealed testimony|approved synthesis|approved annotation/.test(
                 message
