@@ -32,3 +32,8 @@ export type {
   WitnessRecordSource as AnnotationRecordSource,
   AnnotationStore,
 } from "./annotation";
+export type {
+  ArchiveCandidateRecord,
+  ArchiveCandidateStatus,
+  ArchiveCandidateStore,
+} from "./archiveCandidate";

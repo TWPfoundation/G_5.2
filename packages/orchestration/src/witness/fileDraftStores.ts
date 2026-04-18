@@ -129,3 +129,5 @@ export class FileWitnessAnnotationStore
     });
   }
 }
+
+export { FileWitnessArchiveCandidateStore } from "./fileArchiveCandidateStore";

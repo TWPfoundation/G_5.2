@@ -1,6 +1,7 @@
 export type TestimonyLifecycleState =
   | "captured"
   | "retained"
+  | "sealed"
   | "synthesized"
   | "withdrawn";
 

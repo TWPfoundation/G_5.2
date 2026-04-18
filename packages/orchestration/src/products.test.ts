@@ -59,6 +59,10 @@ test("createProductRegistry maps pes and witness to separate policy and data roo
     registry.witness.annotationRoot,
     path.join(repoRoot, "data", "witness", "annotations")
   );
+  assert.equal(
+    registry.witness.archiveCandidateRoot,
+    path.join(repoRoot, "data", "witness", "archive-candidates")
+  );
   assert.equal(registry.witness.capabilities.editorial, false);
   assert.equal(registry.witness.capabilities.authoring, false);
 });

@@ -91,6 +91,7 @@ import {
 import { FileWitnessConsentStore, listConsentForWitness } from "../../../packages/orchestration/src/witness/fileConsentStore";
 import {
   FileWitnessAnnotationStore,
+  FileWitnessArchiveCandidateStore,
   FileWitnessSynthesisStore,
 } from "../../../packages/orchestration/src/witness/fileDraftStores";
 import { FileWitnessTestimonyStore } from "../../../packages/orchestration/src/witness/fileTestimonyStore";
@@ -132,13 +133,19 @@ import { validateReport } from "../../../packages/evals/src/reporters/reportSche
 import { isConsentScope } from "../../../packages/witness-types/src/consent";
 import {
   approveWitnessAnnotation,
+  approveWitnessArchiveReview,
   approveWitnessSynthesis,
   createWitnessAnnotationDraft,
+  createWitnessArchiveCandidate,
   createWitnessSynthesisDraft,
   getWitnessConsentGate,
+  markWitnessPublicationReady,
   persistWitnessTurnArtifacts,
+  rejectWitnessArchiveReview,
   rejectWitnessAnnotation,
+  rejectWitnessPublication,
   rejectWitnessSynthesis,
+  sealWitnessTestimony,
 } from "../../../packages/orchestration/src/witness/runtime";
 import { computeDiff, type JsonReport } from "./reportUtils";
 import {
@@ -273,6 +280,18 @@ function annotationStoreFor(product: ProductConfig): FileWitnessAnnotationStore 
   }
 
   return new FileWitnessAnnotationStore(product.annotationRoot);
+}
+
+function archiveCandidateStoreFor(
+  product: ProductConfig
+): FileWitnessArchiveCandidateStore {
+  if (!product.archiveCandidateRoot) {
+    throw new Error(
+      `Product ${product.id} does not define an archive candidate root.`
+    );
+  }
+
+  return new FileWitnessArchiveCandidateStore(product.archiveCandidateRoot);
 }
 
 function witnessMissingScopes(error: unknown): string[] | null {
@@ -1336,6 +1355,30 @@ export async function handleRequest(
     return;
   }
 
+  const witnessTestimonySealMatch = url.pathname.match(
+    /^\/api\/witness\/testimony\/([^/]+)\/seal$/
+  );
+  if (witnessTestimonySealMatch && req.method === "POST") {
+    try {
+      const body = (await readJsonBody(req)) as { note?: string; actor?: string };
+      const sealed = await sealWitnessTestimony({
+        testimonyStore: testimonyStoreFor(WITNESS_CONFIG),
+        testimonyId: witnessTestimonySealMatch[1],
+        note: typeof body.note === "string" ? body.note.trim() : undefined,
+      });
+      sendJson(res, 200, sealed);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      const status = /Unknown testimony/.test(message)
+        ? 404
+        : /Withdrawn testimony/.test(message)
+          ? 409
+          : 500;
+      sendJson(res, status, { error: message });
+    }
+    return;
+  }
+
   if (url.pathname === "/api/witness/synthesis" && req.method === "GET") {
     const witnessId = url.searchParams.get("witnessId")?.trim();
     const testimonyId = url.searchParams.get("testimonyId")?.trim();
@@ -1564,6 +1607,144 @@ export async function handleRequest(
           ? 404
           : /Only draft|segment|offsets|quote/.test(message)
             ? 400
+            : 500;
+      sendJson(res, status, { error: message });
+    }
+    return;
+  }
+
+  if (url.pathname === "/api/witness/archive-candidates" && req.method === "GET") {
+    const witnessId = url.searchParams.get("witnessId")?.trim();
+    const testimonyId = url.searchParams.get("testimonyId")?.trim();
+    if (!witnessId || !testimonyId) {
+      sendJson(res, 400, { error: "witnessId and testimonyId are required" });
+      return;
+    }
+    try {
+      const items = (await archiveCandidateStoreFor(WITNESS_CONFIG).list()).filter(
+        (record) =>
+          record.witnessId === witnessId && record.testimonyId === testimonyId
+      );
+      sendJson(res, 200, items);
+    } catch (err) {
+      sendJson(res, 500, {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+    return;
+  }
+
+  const witnessArchiveCandidateMatch = url.pathname.match(
+    /^\/api\/witness\/archive-candidates\/([^/]+)$/
+  );
+  if (witnessArchiveCandidateMatch && req.method === "GET") {
+    try {
+      const item = await archiveCandidateStoreFor(WITNESS_CONFIG).load(
+        witnessArchiveCandidateMatch[1]
+      );
+      if (!item) {
+        sendJson(res, 404, { error: "Archive candidate not found" });
+        return;
+      }
+      sendJson(res, 200, item);
+    } catch (err) {
+      sendJson(res, 500, {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+    return;
+  }
+
+  if (url.pathname === "/api/witness/archive-candidates" && req.method === "POST") {
+    try {
+      const body = (await readJsonBody(req)) as { testimonyId?: string };
+      if (!body.testimonyId?.trim()) {
+        sendJson(res, 400, { error: "testimonyId is required" });
+        return;
+      }
+      const created = await createWitnessArchiveCandidate({
+        testimonyId: body.testimonyId.trim(),
+        testimonyStore: testimonyStoreFor(WITNESS_CONFIG),
+        synthesisStore: synthesisStoreFor(WITNESS_CONFIG),
+        annotationStore: annotationStoreFor(WITNESS_CONFIG),
+        archiveCandidateStore: archiveCandidateStoreFor(WITNESS_CONFIG),
+        consentStore: consentStoreFor(WITNESS_CONFIG),
+      });
+      sendJson(res, 201, created);
+    } catch (err) {
+      const missingScopes = witnessMissingScopes(err);
+      if (missingScopes) {
+        sendJson(res, 409, {
+          error: err instanceof Error ? err.message : String(err),
+          missingScopes,
+        });
+        return;
+      }
+      const message = err instanceof Error ? err.message : String(err);
+      const status =
+        /Unknown testimony/.test(message)
+          ? 404
+          : /sealed testimony|approved synthesis|approved annotation/.test(message)
+            ? 409
+            : 500;
+      sendJson(res, status, { error: message });
+    }
+    return;
+  }
+
+  const witnessArchiveCandidateActionMatch = url.pathname.match(
+    /^\/api\/witness\/archive-candidates\/([^/]+)\/(approve-archive-review|reject-archive-review|mark-publication-ready|reject-publication)$/
+  );
+  if (witnessArchiveCandidateActionMatch && req.method === "POST") {
+    try {
+      const body = (await readJsonBody(req)) as { note?: string; actor?: string };
+      const [, candidateId, action] = witnessArchiveCandidateActionMatch;
+      const note = typeof body.note === "string" ? body.note.trim() : undefined;
+      const archiveCandidateStore = archiveCandidateStoreFor(WITNESS_CONFIG);
+      const updated =
+        action === "approve-archive-review"
+          ? await approveWitnessArchiveReview({
+              archiveCandidateStore,
+              candidateId,
+              note,
+            })
+          : action === "reject-archive-review"
+            ? await rejectWitnessArchiveReview({
+                archiveCandidateStore,
+                candidateId,
+                note,
+              })
+            : action === "mark-publication-ready"
+              ? await markWitnessPublicationReady({
+                  archiveCandidateStore,
+                  consentStore: consentStoreFor(WITNESS_CONFIG),
+                  testimonyStore: testimonyStoreFor(WITNESS_CONFIG),
+                  candidateId,
+                  note,
+                })
+              : await rejectWitnessPublication({
+                  archiveCandidateStore,
+                  candidateId,
+                  note,
+                });
+      sendJson(res, 200, updated);
+    } catch (err) {
+      const missingScopes = witnessMissingScopes(err);
+      if (missingScopes) {
+        sendJson(res, 409, {
+          error: err instanceof Error ? err.message : String(err),
+          missingScopes,
+        });
+        return;
+      }
+      const message = err instanceof Error ? err.message : String(err);
+      const status =
+        /Unknown archive candidate|Unknown testimony/.test(message)
+          ? 404
+          : /Only draft|Only archive-review-approved|publication-ready|consent requirements/.test(
+              message
+            )
+            ? 409
             : 500;
       sendJson(res, status, { error: message });
     }

@@ -228,6 +228,8 @@ body{margin:0;min-height:100vh;font-family:Inter,sans-serif;color:var(--text);ba
         <button class="btn quiet" id="grantRetentionBtn">Grant retention</button>
         <button class="btn quiet" id="grantSynthesisBtn">Grant synthesis</button>
         <button class="btn quiet" id="grantAnnotationBtn">Grant annotation</button>
+        <button class="btn quiet" id="grantArchiveReviewBtn">Grant archive review</button>
+        <button class="btn quiet" id="grantPublicationBtn">Grant publication</button>
         <button class="btn quiet" id="refreshWitnessBtn">Refresh Witness State</button>
       </div>
       <div class="meta" id="witnessConsentMeta" style="margin-top:10px">No witness selected.</div>
@@ -236,6 +238,8 @@ body{margin:0;min-height:100vh;font-family:Inter,sans-serif;color:var(--text);ba
       <div class="drawer-list" id="witnessSynthesisList" style="margin-top:10px"></div>
       <div class="meta" id="witnessAnnotationMeta" style="margin-top:14px">No annotation state loaded.</div>
       <div class="drawer-list" id="witnessAnnotationList" style="margin-top:10px"></div>
+      <div class="meta" id="witnessArchiveMeta" style="margin-top:14px">No archive-candidate state loaded.</div>
+      <div class="drawer-list" id="witnessArchiveList" style="margin-top:10px"></div>
     </div>
   </div>
   <div class="box" id="memoryCard">
@@ -321,13 +325,13 @@ const state={
   latestProvider:null,sessionSearch:"",memorySearch:"",
   sortKey:"updatedAt",sortDir:"desc",archiveFilter:"active",tagFilter:null,
   providerList:[],defaultProvider:null,hasApiKey:false,
-  product:"pes",witnessId:"",witnessConsent:[],witnessTestimony:[],witnessSynthesis:[],witnessAnnotations:[],selectedWitnessTestimonyId:null,memoryStateFilter:"accepted",
+  product:"pes",witnessId:"",witnessConsent:[],witnessTestimony:[],witnessSynthesis:[],witnessAnnotations:[],witnessArchiveCandidates:[],selectedWitnessTestimonyId:null,memoryStateFilter:"accepted",
   isSending:false,lastError:null,pendingRetry:null,
   previewSnapshot:null,previewMode:null,previewSessionId:null
 };
 
 const PRODUCT_LABELS={pes:"P-E-S",witness:"Witness"};
-const WITNESS_SCOPES=["conversational","retention","synthesis","annotation"];
+const WITNESS_SCOPES=["conversational","retention","synthesis","annotation","archive_review","publication"];
 
 function productLabel(product){return PRODUCT_LABELS[product||state.product]||"P-E-S"}
 function isWitness(){return state.product==="witness"}
@@ -337,6 +341,10 @@ function visibleWitnessTestimony(){
 }
 function activeWitnessTestimony(){
   return visibleWitnessTestimony().find(item=>item.id===state.selectedWitnessTestimonyId)||null;
+}
+function activeWitnessArchiveCandidates(){
+  const active=activeWitnessTestimony();
+  return active?state.witnessArchiveCandidates.filter(item=>item.testimonyId===active.id):[];
 }
 function latestWitnessDecision(scope){
   return [...state.witnessConsent]
@@ -650,6 +658,8 @@ function renderWitnessCard(){
     $("#witnessSynthesisList").innerHTML='<div class="meta">No witness selected.</div>';
     $("#witnessAnnotationMeta").textContent="No annotation state loaded.";
     $("#witnessAnnotationList").innerHTML='<div class="meta">No witness selected.</div>';
+    $("#witnessArchiveMeta").textContent="No archive-candidate state loaded.";
+    $("#witnessArchiveList").innerHTML='<div class="meta">No witness selected.</div>';
     return;
   }
   const scopeSummary=WITNESS_SCOPES.map(scope=>{
@@ -666,6 +676,8 @@ function renderWitnessCard(){
     $("#witnessSynthesisList").innerHTML='<div class="meta">Create or open a testimony first.</div>';
     $("#witnessAnnotationMeta").textContent="No active testimony available for annotations.";
     $("#witnessAnnotationList").innerHTML='<div class="meta">Create or open a testimony first.</div>';
+    $("#witnessArchiveMeta").textContent="No active testimony available for archive review.";
+    $("#witnessArchiveList").innerHTML='<div class="meta">Create or open a testimony first.</div>';
     return;
   }
   if(state.selectedWitnessTestimonyId&&!testimony.some(item=>item.id===state.selectedWitnessTestimonyId)){
@@ -679,6 +691,7 @@ function renderWitnessCard(){
       <div class="rerun-row" style="margin-top:8px">
         <button class="btn quiet" data-select-witness-testimony="${esc(item.id)}">${state.selectedWitnessTestimonyId===item.id?"Selected":"Select"}</button>
         <button class="btn quiet" data-open-witness-session="${esc(item.sessionId)}" data-open-testimony-id="${esc(item.id)}">Open Session</button>
+        ${item.state!=="sealed"?`<button class="btn quiet" data-witness-testimony-seal="${esc(item.id)}">Seal testimony</button>`:""}
       </div>
     </div>`).join("");
   $$("[data-select-witness-testimony]").forEach(node=>node.addEventListener("click",()=>{
@@ -693,10 +706,15 @@ function renderWitnessCard(){
     if(testimonyId)state.selectedWitnessTestimonyId=testimonyId;
     if(id)await loadSession(id);
   }));
+  $$("[data-witness-testimony-seal]").forEach(node=>node.addEventListener("click",async()=>{
+    const id=node.getAttribute("data-witness-testimony-seal");
+    if(id)await sealWitnessTestimonyRecord(id);
+  }));
 
   const active=activeWitnessTestimony();
   const synthesis=active?state.witnessSynthesis.filter(item=>item.testimonyId===active.id):[];
   const annotations=active?state.witnessAnnotations.filter(item=>item.testimonyId===active.id):[];
+  const archiveCandidates=activeWitnessArchiveCandidates();
 
   $("#witnessSynthesisMeta").textContent=active
     ? `Synthesis drafts for testimony ${active.id.slice(0,8)}`
@@ -744,6 +762,32 @@ function renderWitnessCard(){
       </div>`).join(""):'<div class="meta">No annotation records yet for this testimony.</div>'}
   `:'<div class="meta">Select a testimony before drafting or reviewing annotations.</div>';
 
+  $("#witnessArchiveMeta").textContent=active
+    ? `Archive review state for testimony ${active.id.slice(0,8)} · ${active.state==="sealed"?"sealed":"not sealed"}`
+    : "Select a testimony to inspect archive candidates.";
+  $("#witnessArchiveList").innerHTML=active?`
+    <div class="context">
+      <div class="label">Selected testimony</div>
+      <div class="value">${esc(active.title||`Session ${active.sessionId.slice(0,8)}`)}</div>
+      <div class="meta">Seal state: ${esc(active.state)}</div>
+      <div class="rerun-row" style="margin-top:8px">
+        ${active.state!=="sealed"?`<button class="btn quiet" data-witness-testimony-seal-inline="${esc(active.id)}">Seal testimony</button>`:""}
+        <button class="btn quiet" data-witness-archive-create="${esc(active.id)}">Create archive candidate</button>
+      </div>
+    </div>
+    ${archiveCandidates.length?archiveCandidates.map(item=>`
+      <div class="context">
+        <div class="label">${esc(item.status)} · ${esc(item.id.slice(0,8))}</div>
+        <div class="value">Synthesis ${esc(item.approvedSynthesisId.slice(0,8))} · Annotation ${esc(item.approvedAnnotationId.slice(0,8))}</div>
+        <div class="meta">Updated ${fmt(item.updatedAt)}${item.reviewNote?` · ${esc(item.reviewNote)}`:""}${item.publicationNote?` · ${esc(item.publicationNote)}`:""}</div>
+        <div class="rerun-row" style="margin-top:8px">
+          ${item.status==="draft"?`<button class="btn quiet" data-witness-archive-approve="${esc(item.id)}">Approve archive review</button><button class="btn quiet" data-witness-archive-reject="${esc(item.id)}">Reject archive review</button>`:""}
+          ${item.status==="archive_review_approved"?`<button class="btn quiet" data-witness-publication-ready="${esc(item.id)}">Mark publication ready</button><button class="btn quiet" data-witness-publication-reject="${esc(item.id)}">Reject publication</button>`:""}
+          ${item.status==="publication_ready"?`<button class="btn quiet" data-witness-publication-reject="${esc(item.id)}">Reject publication</button>`:""}
+        </div>
+      </div>`).join(""):'<div class="meta">No archive candidates yet for this testimony.</div>'}
+  `:'<div class="meta">Select a testimony before managing archive review.</div>';
+
   $$("[data-witness-synthesis-draft]").forEach(node=>node.addEventListener("click",async()=>{
     const testimonyId=node.getAttribute("data-witness-synthesis-draft");
     if(testimonyId)await requestWitnessSynthesisDraft(testimonyId);
@@ -768,15 +812,39 @@ function renderWitnessCard(){
     const id=node.getAttribute("data-witness-annotation-reject");
     if(id)await reviewWitnessRecord("annotations",id,"reject");
   }));
+  $$("[data-witness-testimony-seal-inline]").forEach(node=>node.addEventListener("click",async()=>{
+    const id=node.getAttribute("data-witness-testimony-seal-inline");
+    if(id)await sealWitnessTestimonyRecord(id);
+  }));
+  $$("[data-witness-archive-create]").forEach(node=>node.addEventListener("click",async()=>{
+    const testimonyId=node.getAttribute("data-witness-archive-create");
+    if(testimonyId)await createWitnessArchiveCandidateRecord(testimonyId);
+  }));
+  $$("[data-witness-archive-approve]").forEach(node=>node.addEventListener("click",async()=>{
+    const id=node.getAttribute("data-witness-archive-approve");
+    if(id)await reviewWitnessArchiveCandidate(id,"approve-archive-review");
+  }));
+  $$("[data-witness-archive-reject]").forEach(node=>node.addEventListener("click",async()=>{
+    const id=node.getAttribute("data-witness-archive-reject");
+    if(id)await reviewWitnessArchiveCandidate(id,"reject-archive-review");
+  }));
+  $$("[data-witness-publication-ready]").forEach(node=>node.addEventListener("click",async()=>{
+    const id=node.getAttribute("data-witness-publication-ready");
+    if(id)await reviewWitnessArchiveCandidate(id,"mark-publication-ready");
+  }));
+  $$("[data-witness-publication-reject]").forEach(node=>node.addEventListener("click",async()=>{
+    const id=node.getAttribute("data-witness-publication-reject");
+    if(id)await reviewWitnessArchiveCandidate(id,"reject-publication");
+  }));
 }
 
 async function loadWitnessData(){
   if(!isWitness()){
-    state.witnessConsent=[];state.witnessTestimony=[];state.witnessSynthesis=[];state.witnessAnnotations=[];state.selectedWitnessTestimonyId=null;renderWitnessCard();return;
+    state.witnessConsent=[];state.witnessTestimony=[];state.witnessSynthesis=[];state.witnessAnnotations=[];state.witnessArchiveCandidates=[];state.selectedWitnessTestimonyId=null;renderWitnessCard();return;
   }
   const witnessId=activeWitnessId();
   if(!witnessId){
-    state.witnessConsent=[];state.witnessTestimony=[];state.witnessSynthesis=[];state.witnessAnnotations=[];state.selectedWitnessTestimonyId=null;renderWitnessCard();return;
+    state.witnessConsent=[];state.witnessTestimony=[];state.witnessSynthesis=[];state.witnessAnnotations=[];state.witnessArchiveCandidates=[];state.selectedWitnessTestimonyId=null;renderWitnessCard();return;
   }
   try{
     const [consentRes,testimonyRes]=await Promise.all([
@@ -795,13 +863,19 @@ async function loadWitnessData(){
         .then(async r=>r.ok?await r.json():[])
         .catch(()=>[])
     ));
+    const archiveResponses=await Promise.all(state.witnessTestimony.map(item=>
+      fetch(`/api/witness/archive-candidates?witnessId=${encodeURIComponent(witnessId)}&testimonyId=${encodeURIComponent(item.id)}`)
+        .then(async r=>r.ok?await r.json():[])
+        .catch(()=>[])
+    ));
     state.witnessSynthesis=synthesisResponses.flat();
     state.witnessAnnotations=annotationResponses.flat();
+    state.witnessArchiveCandidates=archiveResponses.flat();
     if(state.selectedWitnessTestimonyId&&!state.witnessTestimony.some(item=>item.id===state.selectedWitnessTestimonyId)){
       state.selectedWitnessTestimonyId=null;
     }
   }catch{
-    state.witnessConsent=[];state.witnessTestimony=[];state.witnessSynthesis=[];state.witnessAnnotations=[];state.selectedWitnessTestimonyId=null;
+    state.witnessConsent=[];state.witnessTestimony=[];state.witnessSynthesis=[];state.witnessAnnotations=[];state.witnessArchiveCandidates=[];state.selectedWitnessTestimonyId=null;
   }
   renderWitnessCard();
 }
@@ -809,7 +883,7 @@ async function loadWitnessData(){
 async function grantWitnessConsent(scope){
   const witnessId=activeWitnessId();
   if(!witnessId){setError("Witness mode requires a witness ID before recording consent.");return}
-  const testimonyId=(scope==="synthesis"||scope==="annotation")?activeWitnessTestimony()?.id:undefined;
+  const testimonyId=(scope==="synthesis"||scope==="annotation"||scope==="archive_review"||scope==="publication")?activeWitnessTestimony()?.id:undefined;
   const res=await fetch("/api/witness/consent",{
     method:"POST",headers:{"Content-Type":"application/json"},
     body:JSON.stringify({witnessId,testimonyId,scope,status:"granted",actor:"witness"})
@@ -856,6 +930,41 @@ async function reviewWitnessRecord(kind,id,action){
   });
   const data=await res.json();
   if(!res.ok){setError(data.error||`Failed to ${action} witness ${kind}`);return}
+  setError("");
+  await loadWitnessData();
+}
+
+async function sealWitnessTestimonyRecord(testimonyId){
+  const note=window.prompt("Optional note for sealing testimony?")||undefined;
+  const res=await fetch(`/api/witness/testimony/${encodeURIComponent(testimonyId)}/seal`,{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({note})
+  });
+  const data=await res.json();
+  if(!res.ok){setError(data.error||"Failed to seal testimony",data);return}
+  setError("");
+  await loadWitnessData();
+}
+
+async function createWitnessArchiveCandidateRecord(testimonyId){
+  const res=await fetch("/api/witness/archive-candidates",{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({testimonyId})
+  });
+  const data=await res.json();
+  if(!res.ok){setError(data.error||"Failed to create archive candidate",data);return}
+  setError("");
+  await loadWitnessData();
+}
+
+async function reviewWitnessArchiveCandidate(id,action){
+  const note=window.prompt(`Optional note for ${action}?`)||undefined;
+  const res=await fetch(`/api/witness/archive-candidates/${encodeURIComponent(id)}/${action}`,{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({note})
+  });
+  const data=await res.json();
+  if(!res.ok){setError(data.error||`Failed to ${action} archive candidate`,data);return}
   setError("");
   await loadWitnessData();
 }
@@ -1253,6 +1362,8 @@ $("#grantConversationalBtn").addEventListener("click",()=>grantWitnessConsent("c
 $("#grantRetentionBtn").addEventListener("click",()=>grantWitnessConsent("retention"));
 $("#grantSynthesisBtn").addEventListener("click",()=>grantWitnessConsent("synthesis"));
 $("#grantAnnotationBtn").addEventListener("click",()=>grantWitnessConsent("annotation"));
+$("#grantArchiveReviewBtn").addEventListener("click",()=>grantWitnessConsent("archive_review"));
+$("#grantPublicationBtn").addEventListener("click",()=>grantWitnessConsent("publication"));
 $("#refreshWitnessBtn").addEventListener("click",loadWitnessData);
 $("#sessionSearch").addEventListener("input",e=>{state.sessionSearch=e.target.value;renderSessionList()});
 $("#memorySearch").addEventListener("input",e=>{state.memorySearch=e.target.value;renderMemoryList()});

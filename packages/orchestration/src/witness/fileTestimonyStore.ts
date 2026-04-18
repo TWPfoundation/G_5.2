@@ -122,6 +122,9 @@ export async function appendTurnToTestimony(
   if (!record) {
     throw new Error(`Unknown testimony record: ${input.testimonyId}`);
   }
+  if (record.state === "sealed") {
+    throw new Error(`Cannot append to sealed testimony: ${input.testimonyId}`);
+  }
 
   const updated: TestimonyRecord = {
     ...record,

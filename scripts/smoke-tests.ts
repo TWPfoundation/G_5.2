@@ -41,6 +41,7 @@ import {
 import { FileWitnessConsentStore } from "../packages/orchestration/src/witness/fileConsentStore";
 import {
   FileWitnessAnnotationStore,
+  FileWitnessArchiveCandidateStore,
   FileWitnessSynthesisStore,
 } from "../packages/orchestration/src/witness/fileDraftStores";
 import { FileWitnessTestimonyStore } from "../packages/orchestration/src/witness/fileTestimonyStore";
@@ -58,11 +59,15 @@ import { FileAuthoredArtifactStore } from "../packages/orchestration/src/reflect
 import { promoteArtifactToProposal } from "../packages/orchestration/src/reflection/promoteArtifact";
 import {
   approveWitnessAnnotation,
+  approveWitnessArchiveReview,
   approveWitnessSynthesis,
   createWitnessAnnotationDraft,
+  createWitnessArchiveCandidate,
   createWitnessSynthesisDraft,
   getWitnessConsentGate,
+  markWitnessPublicationReady,
   persistWitnessTurnArtifacts,
+  sealWitnessTestimony,
 } from "../apps/dashboard/src/witnessRuntime";
 import { validateReport } from "../packages/evals/src/reporters/reportSchema";
 
@@ -520,6 +525,11 @@ async function pathWitnessVerticalSlice(): Promise<void> {
     const witnessConsentRoot = path.join(root, "witness", "consent");
     const witnessSynthesisRoot = path.join(root, "witness", "synthesis");
     const witnessAnnotationRoot = path.join(root, "witness", "annotations");
+    const witnessArchiveCandidateRoot = path.join(
+      root,
+      "witness",
+      "archive-candidates"
+    );
     const pesSessionsRoot = path.join(root, "pes", "sessions");
     const pesMemoryRoot = path.join(root, "pes", "memory");
     const witnessId = `smoke-witness-${randomUUID()}`;
@@ -532,6 +542,9 @@ async function pathWitnessVerticalSlice(): Promise<void> {
     const testimonyStore = new FileWitnessTestimonyStore(witnessTestimonyRoot);
     const synthesisStore = new FileWitnessSynthesisStore(witnessSynthesisRoot);
     const annotationStore = new FileWitnessAnnotationStore(witnessAnnotationRoot);
+    const archiveCandidateStore = new FileWitnessArchiveCandidateStore(
+      witnessArchiveCandidateRoot
+    );
 
     const blocked = await getWitnessConsentGate(consentStore, witnessId);
     assert.equal(blocked.allowed, false);
@@ -604,6 +617,22 @@ async function pathWitnessVerticalSlice(): Promise<void> {
       actor: "witness",
       decidedAt: new Date().toISOString(),
     });
+    await consentStore.appendDecision({
+      witnessId,
+      testimonyId: persisted.testimonyId,
+      scope: "archive_review",
+      status: "granted",
+      actor: "witness",
+      decidedAt: new Date().toISOString(),
+    });
+    await consentStore.appendDecision({
+      witnessId,
+      testimonyId: persisted.testimonyId,
+      scope: "publication",
+      status: "granted",
+      actor: "witness",
+      decidedAt: new Date().toISOString(),
+    });
 
     const synthesisDraft = await createWitnessSynthesisDraft(provider, {
       policyRoot: witnessCanonRoot,
@@ -646,12 +675,46 @@ async function pathWitnessVerticalSlice(): Promise<void> {
     });
     assert.equal(approvedAnnotation.status, "approved");
 
+    const sealedTestimony = await sealWitnessTestimony({
+      testimonyStore,
+      testimonyId: persisted.testimonyId,
+      note: "smoke seal",
+    });
+    assert.equal(sealedTestimony.state, "sealed");
+
+    const candidate = await createWitnessArchiveCandidate({
+      testimonyId: persisted.testimonyId,
+      testimonyStore,
+      synthesisStore,
+      annotationStore,
+      archiveCandidateStore,
+      consentStore,
+    });
+    assert.equal(candidate.status, "draft");
+
+    const archiveApproved = await approveWitnessArchiveReview({
+      archiveCandidateStore,
+      candidateId: candidate.id,
+      note: "smoke archive approval",
+    });
+    assert.equal(archiveApproved.status, "archive_review_approved");
+
+    const publicationReady = await markWitnessPublicationReady({
+      archiveCandidateStore,
+      consentStore,
+      testimonyStore,
+      candidateId: candidate.id,
+      note: "smoke publication ready",
+    });
+    assert.equal(publicationReady.status, "publication_ready");
+
     const pesSessionFiles = await readdir(pesSessionsRoot);
     const pesMemoryFiles = await readdir(pesMemoryRoot);
     assert.equal(pesSessionFiles.length, 0, "witness flow must not write P-E-S sessions");
     assert.equal(pesMemoryFiles.length, 0, "witness flow must not write P-E-S memory");
     assert.ok((await readdir(witnessSynthesisRoot)).length >= 1);
     assert.ok((await readdir(witnessAnnotationRoot)).length >= 1);
+    assert.ok((await readdir(witnessArchiveCandidateRoot)).length >= 1);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

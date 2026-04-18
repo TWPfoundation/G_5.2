@@ -17,6 +17,7 @@ export interface ProductConfig {
   consentRoot?: string;
   synthesisRoot?: string;
   annotationRoot?: string;
+  archiveCandidateRoot?: string;
   capabilities: ProductCapabilities;
 }
 
@@ -45,6 +46,12 @@ export function createProductRegistry(repoRoot: string): ProductRegistry {
       consentRoot: path.join(repoRoot, "data", "witness", "consent"),
       synthesisRoot: path.join(repoRoot, "data", "witness", "synthesis"),
       annotationRoot: path.join(repoRoot, "data", "witness", "annotations"),
+      archiveCandidateRoot: path.join(
+        repoRoot,
+        "data",
+        "witness",
+        "archive-candidates"
+      ),
       capabilities: {
         editorial: false,
         authoring: false,

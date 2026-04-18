@@ -24,6 +24,7 @@ import {
 } from "./fileTestimonyStore";
 import {
   FileWitnessAnnotationStore,
+  FileWitnessArchiveCandidateStore,
   FileWitnessSynthesisStore,
 } from "./fileDraftStores";
 import {
@@ -34,6 +35,10 @@ import type {
   AnnotationEntry,
   AnnotationRecord,
 } from "../../../witness-types/src/annotation";
+import type {
+  ArchiveCandidateRecord,
+  ArchiveCandidateStatus,
+} from "../../../witness-types/src/archiveCandidate";
 import {
   hasGrantedConsent,
   type ConsentScope,
@@ -49,6 +54,12 @@ export interface WitnessConsentGate {
   allowed: boolean;
   missingScopes: ConsentScope[];
 }
+
+const CURRENT_ARCHIVE_CANDIDATE_STATUSES = new Set<ArchiveCandidateStatus>([
+  "draft",
+  "archive_review_approved",
+  "publication_ready",
+]);
 
 export async function getWitnessConsentGate(
   consentStore: FileWitnessConsentStore,
@@ -118,6 +129,42 @@ function defaultWitnessCompensationLogger(event: WitnessCompensationEvent) {
   console.warn(JSON.stringify(event));
 }
 
+function buildWitnessConsentError(
+  missingScopes: ConsentScope[],
+  message = "Witness consent requirements not met."
+) {
+  const error = new Error(message);
+  (error as Error & { missingScopes?: ConsentScope[] }).missingScopes =
+    missingScopes;
+  return error;
+}
+
+async function requireWitnessConsent(
+  consentStore: FileWitnessConsentStore,
+  witnessId: string,
+  testimonyId: string,
+  requiredScopes: ConsentScope[],
+  message?: string
+) {
+  const gate = await getWitnessConsentGate(consentStore, witnessId, {
+    testimonyId,
+    requiredScopes,
+  });
+  if (!gate.allowed) {
+    throw buildWitnessConsentError(gate.missingScopes, message);
+  }
+}
+
+function latestApprovedByTestimony<T extends { testimonyId: string; status: string; updatedAt: string }>(
+  records: T[],
+  testimonyId: string
+): T | null {
+  const approved = records
+    .filter((record) => record.testimonyId === testimonyId && record.status === "approved")
+    .sort((a, b) => a.updatedAt.localeCompare(b.updatedAt));
+  return approved.at(-1) ?? null;
+}
+
 export async function persistWitnessTurnArtifacts(
   input: PersistWitnessTurnArtifactsInput
 ): Promise<PersistWitnessTurnArtifactsResult> {
@@ -133,7 +180,8 @@ export async function persistWitnessTurnArtifacts(
   const existing = (await input.testimonyStore.list()).find(
     (record) =>
       record.sessionId === stampedSession.id &&
-      record.witnessId === input.witnessId
+      record.witnessId === input.witnessId &&
+      record.state !== "sealed"
   );
 
   const rollbackTestimony = async (
@@ -558,10 +606,7 @@ export async function createWitnessSynthesisDraft(
     requiredScopes: ["retention", "synthesis"],
   });
   if (!gate.allowed) {
-    const error = new Error("Witness consent requirements not met.");
-    (error as Error & { missingScopes?: ConsentScope[] }).missingScopes =
-      gate.missingScopes;
-    throw error;
+    throw buildWitnessConsentError(gate.missingScopes);
   }
 
   const text = await generateWitnessSynthesisText(
@@ -626,7 +671,7 @@ export async function approveWitnessSynthesis(
 
   await input.testimonyStore.save({
     ...testimony,
-    state: "synthesized",
+    state: testimony.state === "sealed" ? "sealed" : "synthesized",
     updatedAt: now,
   });
 
@@ -674,10 +719,7 @@ export async function createWitnessAnnotationDraft(
     requiredScopes: ["retention", "annotation"],
   });
   if (!gate.allowed) {
-    const error = new Error("Witness consent requirements not met.");
-    (error as Error & { missingScopes?: ConsentScope[] }).missingScopes =
-      gate.missingScopes;
-    throw error;
+    throw buildWitnessConsentError(gate.missingScopes);
   }
 
   const taxonomy = await loadWitnessAnnotationTaxonomy(input.policyRoot);
@@ -770,5 +812,236 @@ export async function rejectWitnessAnnotation(
     status: "rejected",
     updatedAt: new Date().toISOString(),
     ...(input.reviewNote?.trim() ? { reviewNote: input.reviewNote.trim() } : {}),
+  });
+}
+
+export interface SealWitnessTestimonyInput {
+  testimonyStore: FileWitnessTestimonyStore;
+  testimonyId: string;
+  note?: string;
+}
+
+export async function sealWitnessTestimony(input: SealWitnessTestimonyInput) {
+  const testimony = await input.testimonyStore.load(input.testimonyId);
+  if (!testimony) {
+    throw new Error(`Unknown testimony record: ${input.testimonyId}`);
+  }
+  if (testimony.state === "withdrawn") {
+    throw new Error("Withdrawn testimony cannot be sealed.");
+  }
+  if (testimony.state === "sealed") {
+    return testimony;
+  }
+  return input.testimonyStore.save({
+    ...testimony,
+    state: "sealed",
+    updatedAt: new Date().toISOString(),
+  });
+}
+
+export interface CreateWitnessArchiveCandidateInput {
+  testimonyId: string;
+  testimonyStore: FileWitnessTestimonyStore;
+  synthesisStore: FileWitnessSynthesisStore;
+  annotationStore: FileWitnessAnnotationStore;
+  archiveCandidateStore: FileWitnessArchiveCandidateStore;
+  consentStore: FileWitnessConsentStore;
+}
+
+async function loadArchiveCandidateOrThrow(
+  archiveCandidateStore: FileWitnessArchiveCandidateStore,
+  candidateId: string
+) {
+  const candidate = await archiveCandidateStore.load(candidateId);
+  if (!candidate) {
+    throw new Error(`Unknown archive candidate: ${candidateId}`);
+  }
+  return candidate;
+}
+
+async function loadTestimonyOrThrow(
+  testimonyStore: FileWitnessTestimonyStore,
+  testimonyId: string
+) {
+  const testimony = await testimonyStore.load(testimonyId);
+  if (!testimony) {
+    throw new Error(`Unknown testimony record: ${testimonyId}`);
+  }
+  return testimony;
+}
+
+async function supersedeCurrentArchiveCandidates(
+  archiveCandidateStore: FileWitnessArchiveCandidateStore,
+  testimonyId: string,
+  now: string
+) {
+  const existing = (await archiveCandidateStore.list()).filter(
+    (record) =>
+      record.testimonyId === testimonyId &&
+      CURRENT_ARCHIVE_CANDIDATE_STATUSES.has(record.status)
+  );
+
+  for (const record of existing) {
+    await archiveCandidateStore.save({
+      ...record,
+      status: "superseded",
+      updatedAt: now,
+    });
+  }
+}
+
+export async function createWitnessArchiveCandidate(
+  input: CreateWitnessArchiveCandidateInput
+) {
+  const testimony = await loadTestimonyOrThrow(
+    input.testimonyStore,
+    input.testimonyId
+  );
+  if (testimony.state !== "sealed") {
+    throw new Error("Archive candidate creation requires a sealed testimony.");
+  }
+
+  await requireWitnessConsent(
+    input.consentStore,
+    testimony.witnessId,
+    testimony.id,
+    ["retention", "archive_review"],
+    "Witness archive-review consent requirements not met."
+  );
+
+  const approvedSynthesis = latestApprovedByTestimony(
+    await input.synthesisStore.list(),
+    testimony.id
+  );
+  if (!approvedSynthesis) {
+    throw new Error(
+      `Archive candidate creation requires an approved synthesis for testimony ${testimony.id}.`
+    );
+  }
+
+  const approvedAnnotation = latestApprovedByTestimony(
+    await input.annotationStore.list(),
+    testimony.id
+  );
+  if (!approvedAnnotation) {
+    throw new Error(
+      `Archive candidate creation requires an approved annotation for testimony ${testimony.id}.`
+    );
+  }
+
+  const now = new Date().toISOString();
+  await supersedeCurrentArchiveCandidates(
+    input.archiveCandidateStore,
+    testimony.id,
+    now
+  );
+
+  return input.archiveCandidateStore.create({
+    witnessId: testimony.witnessId,
+    testimonyId: testimony.id,
+    approvedSynthesisId: approvedSynthesis.id,
+    approvedAnnotationId: approvedAnnotation.id,
+    createdAt: now,
+  });
+}
+
+export interface UpdateWitnessArchiveCandidateInput {
+  archiveCandidateStore: FileWitnessArchiveCandidateStore;
+  candidateId: string;
+  note?: string;
+}
+
+export async function approveWitnessArchiveReview(
+  input: UpdateWitnessArchiveCandidateInput
+) {
+  const record = await loadArchiveCandidateOrThrow(
+    input.archiveCandidateStore,
+    input.candidateId
+  );
+  if (record.status !== "draft") {
+    throw new Error("Only draft archive candidates may be archive-review approved.");
+  }
+  return input.archiveCandidateStore.save({
+    ...record,
+    status: "archive_review_approved",
+    updatedAt: new Date().toISOString(),
+    ...(input.note?.trim() ? { reviewNote: input.note.trim() } : {}),
+  });
+}
+
+export async function rejectWitnessArchiveReview(
+  input: UpdateWitnessArchiveCandidateInput
+) {
+  const record = await loadArchiveCandidateOrThrow(
+    input.archiveCandidateStore,
+    input.candidateId
+  );
+  if (record.status !== "draft") {
+    throw new Error("Only draft archive candidates may be archive-review rejected.");
+  }
+  return input.archiveCandidateStore.save({
+    ...record,
+    status: "archive_review_rejected",
+    updatedAt: new Date().toISOString(),
+    ...(input.note?.trim() ? { reviewNote: input.note.trim() } : {}),
+  });
+}
+
+export interface MarkWitnessPublicationReadyInput {
+  archiveCandidateStore: FileWitnessArchiveCandidateStore;
+  consentStore: FileWitnessConsentStore;
+  testimonyStore: FileWitnessTestimonyStore;
+  candidateId: string;
+  note?: string;
+}
+
+export async function markWitnessPublicationReady(
+  input: MarkWitnessPublicationReadyInput
+) {
+  const record = await loadArchiveCandidateOrThrow(
+    input.archiveCandidateStore,
+    input.candidateId
+  );
+  if (record.status !== "archive_review_approved") {
+    throw new Error(
+      "Only archive-review-approved candidates may be marked publication ready."
+    );
+  }
+  const testimony = await loadTestimonyOrThrow(input.testimonyStore, record.testimonyId);
+  await requireWitnessConsent(
+    input.consentStore,
+    testimony.witnessId,
+    testimony.id,
+    ["publication"],
+    "Witness publication consent requirements not met."
+  );
+  return input.archiveCandidateStore.save({
+    ...record,
+    status: "publication_ready",
+    updatedAt: new Date().toISOString(),
+    ...(input.note?.trim() ? { publicationNote: input.note.trim() } : {}),
+  });
+}
+
+export async function rejectWitnessPublication(
+  input: UpdateWitnessArchiveCandidateInput
+) {
+  const record = await loadArchiveCandidateOrThrow(
+    input.archiveCandidateStore,
+    input.candidateId
+  );
+  if (
+    record.status !== "archive_review_approved" &&
+    record.status !== "publication_ready"
+  ) {
+    throw new Error(
+      "Only archive-review-approved or publication-ready candidates may be publication rejected."
+    );
+  }
+  return input.archiveCandidateStore.save({
+    ...record,
+    status: "publication_rejected",
+    updatedAt: new Date().toISOString(),
+    ...(input.note?.trim() ? { publicationNote: input.note.trim() } : {}),
   });
 }
