@@ -14,6 +14,7 @@ import { FileWitnessConsentStore } from "../../../packages/orchestration/src/wit
 import {
   FileWitnessAnnotationStore,
   FileWitnessArchiveCandidateStore,
+  FileWitnessPublicationBundleStore,
   FileWitnessSynthesisStore,
 } from "../../../packages/orchestration/src/witness/fileDraftStores";
 import { FileWitnessTestimonyStore } from "../../../packages/orchestration/src/witness/fileTestimonyStore";
@@ -44,6 +45,9 @@ async function cleanupWitnessArtifacts(
   const annotationStore = new FileWitnessAnnotationStore(registry.witness.annotationRoot!);
   const archiveCandidateStore = new FileWitnessArchiveCandidateStore(
     registry.witness.archiveCandidateRoot!
+  );
+  const publicationBundleStore = new FileWitnessPublicationBundleStore(
+    registry.witness.publicationBundleRoot!
   );
   const memoryStore = new FileMemoryStore(registry.witness.memoryRoot);
   const sessionStore = new FileSessionStore(registry.witness.sessionsRoot);
@@ -83,6 +87,34 @@ async function cleanupWitnessArtifacts(
       .map((record) => archiveCandidateStore.delete(record.id))
   );
 
+  const publicationBundleFiles = await readdir(
+    registry.witness.publicationBundleRoot!
+  ).catch(() => []);
+  const publicationBundles = (
+    await Promise.all(
+      publicationBundleFiles
+        .filter((file) => file.endsWith(".json"))
+        .map(async (file) =>
+          publicationBundleStore.load(file.slice(0, -".json".length))
+        )
+    )
+  ).filter((record) => record?.witnessId === witnessId);
+  await Promise.all(
+    publicationBundles
+      .flatMap((record) => {
+        const tasks: Array<Promise<unknown>> = [
+          publicationBundleStore.delete(record!.id),
+        ];
+        if (record?.bundleJsonPath) {
+          tasks.push(rm(record.bundleJsonPath, { force: true }));
+        }
+        if (record?.bundleMarkdownPath) {
+          tasks.push(rm(record.bundleMarkdownPath, { force: true }));
+        }
+        return tasks;
+      })
+  );
+
   const memoryItems = await memoryStore.list();
   await Promise.all(
     memoryItems
@@ -110,6 +142,137 @@ async function cleanupWitnessArtifacts(
       force: true,
     });
   }
+}
+
+async function createPublicationReadyArchiveCandidate(witnessId: string) {
+  for (const scope of [
+    "conversational",
+    "retention",
+    "synthesis",
+    "annotation",
+    "archive_review",
+    "publication",
+  ]) {
+    const consent = await requestJson("/api/witness/consent", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        witnessId,
+        scope,
+        status: "granted",
+        actor: "witness",
+      }),
+    });
+    assert.equal(consent.response.status, 201);
+  }
+
+  const turn = await requestJson("/api/inquiry/turn", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      product: "witness",
+      provider: "mock",
+      witnessId,
+      mode: "dialogic",
+      userMessage: "Prepare this testimony for publication bundling.",
+    }),
+  });
+  assert.equal(turn.response.status, 200);
+
+  const testimonyId = turn.json.testimonyId as string;
+  const sessionId = turn.json.session.id as string;
+  const turnId = turn.json.persistedTurn.id as string;
+
+  const seal = await requestJson(
+    `/api/witness/testimony/${encodeURIComponent(testimonyId)}/seal`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ note: "seal it" }),
+    }
+  );
+  assert.equal(seal.response.status, 200);
+
+  const synthesis = await requestJson("/api/witness/synthesis/draft", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ testimonyId, provider: "mock" }),
+  });
+  assert.equal(synthesis.response.status, 201);
+
+  const approvedSynthesis = await requestJson(
+    `/api/witness/synthesis/${encodeURIComponent(synthesis.json.id)}/approve`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ note: "approve synthesis" }),
+    }
+  );
+  assert.equal(approvedSynthesis.response.status, 200);
+
+  const testimony = await requestJson(
+    `/api/witness/testimony/${encodeURIComponent(testimonyId)}`
+  );
+  assert.equal(testimony.response.status, 200);
+  const witnessSegmentIds = testimony.json.segments
+    .filter((segment: { role: string }) => segment.role === "witness")
+    .map((segment: { id: string }) => segment.id);
+
+  const annotation = await requestJson("/api/witness/annotations/draft", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      testimonyId,
+      provider: "mock",
+      segmentIds: witnessSegmentIds,
+    }),
+  });
+  assert.equal(annotation.response.status, 201);
+
+  const approvedAnnotation = await requestJson(
+    `/api/witness/annotations/${encodeURIComponent(annotation.json.id)}/approve`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ note: "approve annotation" }),
+    }
+  );
+  assert.equal(approvedAnnotation.response.status, 200);
+
+  const candidate = await requestJson("/api/witness/archive-candidates", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ testimonyId }),
+  });
+  assert.equal(candidate.response.status, 201);
+
+  const archiveApproved = await requestJson(
+    `/api/witness/archive-candidates/${encodeURIComponent(candidate.json.id)}/approve-archive-review`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ note: "archive approve" }),
+    }
+  );
+  assert.equal(archiveApproved.response.status, 200);
+
+  const publicationReady = await requestJson(
+    `/api/witness/archive-candidates/${encodeURIComponent(candidate.json.id)}/mark-publication-ready`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ note: "ready" }),
+    }
+  );
+  assert.equal(publicationReady.response.status, 200);
+
+  return {
+    witnessId,
+    testimonyId,
+    sessionId,
+    turnId,
+    archiveCandidateId: candidate.json.id as string,
+  };
 }
 
 test.before(async () => {
@@ -692,4 +855,127 @@ test("archive review and publication endpoints persist witness candidate state w
   } finally {
     await cleanupWitnessArtifacts(witnessId, sessionId, turnId);
   }
+});
+
+test("publication bundle endpoints create and list witness export bundles", async () => {
+  const witnessId = `wit-${randomUUID()}`;
+  let testimonyId: string | undefined;
+  let sessionId: string | undefined;
+  let turnId: string | undefined;
+
+  try {
+    const setup = await createPublicationReadyArchiveCandidate(witnessId);
+    testimonyId = setup.testimonyId;
+    sessionId = setup.sessionId;
+    turnId = setup.turnId;
+
+    const created = await requestJson("/api/witness/publication-bundles", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        archiveCandidateId: setup.archiveCandidateId,
+      }),
+    });
+
+    assert.equal(created.response.status, 201);
+    assert.equal(created.json?.witnessId, witnessId);
+    assert.equal(created.json?.testimonyId, testimonyId);
+    assert.equal(created.json?.archiveCandidateId, setup.archiveCandidateId);
+    assert.match(created.json?.bundleJsonPath ?? "", /publication-bundles.+\.json$/);
+    assert.match(
+      created.json?.bundleMarkdownPath ?? "",
+      /publication-bundles.+\.md$/
+    );
+
+    const listed = await requestJson(
+      `/api/witness/publication-bundles?witnessId=${encodeURIComponent(witnessId)}&testimonyId=${encodeURIComponent(testimonyId)}`
+    );
+    assert.equal(listed.response.status, 200);
+    assert.equal(listed.json.length, 1);
+    assert.equal(listed.json[0].id, created.json.id);
+    assert.equal(listed.json[0].bundleJsonPath, created.json.bundleJsonPath);
+    assert.equal(
+      listed.json[0].bundleMarkdownPath,
+      created.json.bundleMarkdownPath
+    );
+
+    const fetched = await requestJson(
+      `/api/witness/publication-bundles/${encodeURIComponent(created.json.id)}`
+    );
+    assert.equal(fetched.response.status, 200);
+    assert.equal(fetched.json?.id, created.json.id);
+    assert.equal(fetched.json?.bundleJsonPath, created.json.bundleJsonPath);
+    assert.equal(
+      fetched.json?.bundleMarkdownPath,
+      created.json.bundleMarkdownPath
+    );
+  } finally {
+    await cleanupWitnessArtifacts(witnessId, sessionId, turnId);
+  }
+});
+
+test("publication bundle creation returns 409 until archive candidate is publication ready", async () => {
+  const witnessId = `wit-${randomUUID()}`;
+  let sessionId: string | undefined;
+  let turnId: string | undefined;
+
+  try {
+    const setup = await createPublicationReadyArchiveCandidate(witnessId);
+    sessionId = setup.sessionId;
+    turnId = setup.turnId;
+
+    const revert = await requestJson(
+      `/api/witness/archive-candidates/${encodeURIComponent(setup.archiveCandidateId)}/reject-publication`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ note: "not ready anymore" }),
+      }
+    );
+    assert.equal(revert.response.status, 200);
+    assert.equal(revert.json?.status, "publication_rejected");
+
+    const created = await requestJson("/api/witness/publication-bundles", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        archiveCandidateId: setup.archiveCandidateId,
+      }),
+    });
+
+    assert.equal(created.response.status, 409);
+    assert.match(
+      created.json?.error ?? "",
+      /publication_ready archive candidate/i
+    );
+  } finally {
+    await cleanupWitnessArtifacts(witnessId, sessionId, turnId);
+  }
+});
+
+test("publication bundle endpoints return 400 and 404 for missing or unknown identifiers", async () => {
+  const listMissing = await requestJson("/api/witness/publication-bundles");
+  assert.equal(listMissing.response.status, 400);
+
+  const createMissing = await requestJson("/api/witness/publication-bundles", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  assert.equal(createMissing.response.status, 400);
+
+  const unknownId = `bundle-${randomUUID()}`;
+  const fetched = await requestJson(
+    `/api/witness/publication-bundles/${encodeURIComponent(unknownId)}`
+  );
+  assert.equal(fetched.response.status, 404);
+
+  const created = await requestJson("/api/witness/publication-bundles", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      archiveCandidateId: `cand-${randomUUID()}`,
+    }),
+  });
+  assert.equal(created.response.status, 404);
 });

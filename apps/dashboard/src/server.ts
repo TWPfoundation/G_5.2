@@ -92,6 +92,7 @@ import { FileWitnessConsentStore, listConsentForWitness } from "../../../package
 import {
   FileWitnessAnnotationStore,
   FileWitnessArchiveCandidateStore,
+  FileWitnessPublicationBundleStore,
   FileWitnessSynthesisStore,
 } from "../../../packages/orchestration/src/witness/fileDraftStores";
 import { FileWitnessTestimonyStore } from "../../../packages/orchestration/src/witness/fileTestimonyStore";
@@ -147,6 +148,7 @@ import {
   rejectWitnessSynthesis,
   sealWitnessTestimony,
 } from "../../../packages/orchestration/src/witness/runtime";
+import { createWitnessPublicationBundle } from "./witnessRuntime";
 import { computeDiff, type JsonReport } from "./reportUtils";
 import {
   sortSessionSummaries,
@@ -292,6 +294,18 @@ function archiveCandidateStoreFor(
   }
 
   return new FileWitnessArchiveCandidateStore(product.archiveCandidateRoot);
+}
+
+function publicationBundleStoreFor(
+  product: ProductConfig
+): FileWitnessPublicationBundleStore {
+  if (!product.publicationBundleRoot) {
+    throw new Error(
+      `Product ${product.id} does not define a publication bundle root.`
+    );
+  }
+
+  return new FileWitnessPublicationBundleStore(product.publicationBundleRoot);
 }
 
 function witnessMissingScopes(error: unknown): string[] | null {
@@ -1744,6 +1758,100 @@ export async function handleRequest(
           : /Only draft|Only archive-review-approved|publication-ready|consent requirements/.test(
               message
             )
+            ? 409
+            : 500;
+      sendJson(res, status, { error: message });
+    }
+    return;
+  }
+
+  if (
+    url.pathname === "/api/witness/publication-bundles" &&
+    req.method === "GET"
+  ) {
+    const witnessId = url.searchParams.get("witnessId")?.trim();
+    const testimonyId = url.searchParams.get("testimonyId")?.trim();
+    if (!witnessId || !testimonyId) {
+      sendJson(res, 400, { error: "witnessId and testimonyId are required" });
+      return;
+    }
+    try {
+      const store = publicationBundleStoreFor(WITNESS_CONFIG);
+      const files = await fs.readdir(WITNESS_CONFIG.publicationBundleRoot!);
+      const items = (
+        await Promise.all(
+          files
+            .filter((file) => file.endsWith(".json"))
+            .map((file) => store.load(file.slice(0, -".json".length)))
+        )
+      )
+        .filter(
+          (record): record is NonNullable<typeof record> =>
+            record !== null &&
+            record.witnessId === witnessId &&
+            record.testimonyId === testimonyId
+        )
+        .sort((a, b) => (a.createdAt ?? "").localeCompare(b.createdAt ?? ""));
+      sendJson(res, 200, items);
+    } catch (err) {
+      sendJson(res, 500, {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+    return;
+  }
+
+  const witnessPublicationBundleMatch = url.pathname.match(
+    /^\/api\/witness\/publication-bundles\/([^/]+)$/
+  );
+  if (witnessPublicationBundleMatch && req.method === "GET") {
+    try {
+      const item = await publicationBundleStoreFor(WITNESS_CONFIG).load(
+        witnessPublicationBundleMatch[1]
+      );
+      if (!item) {
+        sendJson(res, 404, { error: "Publication bundle not found" });
+        return;
+      }
+      sendJson(res, 200, item);
+    } catch (err) {
+      sendJson(res, 500, {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+    return;
+  }
+
+  if (
+    url.pathname === "/api/witness/publication-bundles" &&
+    req.method === "POST"
+  ) {
+    try {
+      const body = (await readJsonBody(req)) as { archiveCandidateId?: string };
+      if (!body.archiveCandidateId?.trim()) {
+        sendJson(res, 400, { error: "archiveCandidateId is required" });
+        return;
+      }
+      const created = await createWitnessPublicationBundle({
+        publicationBundleRoot: WITNESS_CONFIG.publicationBundleRoot!,
+        archiveCandidateId: body.archiveCandidateId.trim(),
+        testimonyStore: testimonyStoreFor(WITNESS_CONFIG),
+        synthesisStore: synthesisStoreFor(WITNESS_CONFIG),
+        annotationStore: annotationStoreFor(WITNESS_CONFIG),
+        archiveCandidateStore: archiveCandidateStoreFor(WITNESS_CONFIG),
+        publicationBundleStore: publicationBundleStoreFor(WITNESS_CONFIG),
+      });
+      sendJson(res, 201, created);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      const status =
+        /Unknown archive candidate|Unknown testimony|Unknown synthesis|Unknown annotation/.test(
+          message
+        )
+          ? 404
+          : /publication_ready archive candidate|sealed testimony|approved synthesis|approved annotation/.test(
+                message
+              )
             ? 409
             : 500;
       sendJson(res, status, { error: message });
