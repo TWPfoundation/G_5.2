@@ -52,22 +52,37 @@ export function trimToTokenBudget<T extends { content: string; slug: string }>(
   const available = budgetTokens - reservedTokens;
   let used = 0;
   const result: T[] = [];
-  const dropped: string[] = [];
+  const kept: Array<{ slug: string; estimatedTokens: number }> = [];
+  const dropped: Array<{ slug: string; estimatedTokens: number }> = [];
+  let candidateTotal = 0;
 
   for (const doc of docs) {
     const cost = estimateTokens(doc.content);
+    candidateTotal += cost;
     if (used + cost <= available) {
       result.push(doc);
       used += cost;
+      kept.push({
+        slug: doc.slug,
+        estimatedTokens: cost,
+      });
     } else {
-      dropped.push(doc.slug);
+      dropped.push({
+        slug: doc.slug,
+        estimatedTokens: cost,
+      });
     }
   }
 
   if (dropped.length > 0 && process.env.NODE_ENV !== "test") {
+    const formatDocs = (items: Array<{ slug: string; estimatedTokens: number }>) =>
+      items.map((item) => `${item.slug}(${item.estimatedTokens})`).join(", ");
+
     console.warn(
-      `[budget] Token budget exceeded — dropped: ${dropped.join(", ")} ` +
-        `(used ${used}/${available} tokens)`
+      `[budget] Token budget exceeded — used ${used}/${available} tokens; ` +
+        `candidate total ${candidateTotal}; ` +
+        `kept: ${formatDocs(kept)}; ` +
+        `dropped: ${formatDocs(dropped)}`
     );
   }
 
