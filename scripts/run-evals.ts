@@ -31,6 +31,9 @@ import {
 import { writeJsonReport } from "../packages/evals/src/reporters/jsonReporter";
 import { buildReportMetadata } from "../packages/evals/src/reporters/reportMetadata";
 import { buildScoreReport } from "../packages/evals/src/assertions/scoreReport";
+import { flushBudgetDiagnosticsSummary } from "../packages/orchestration/src/utils/budget";
+
+process.env.G52_BUDGET_DIAGNOSTICS ??= "summary";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -122,6 +125,7 @@ async function main() {
   );
 
   console.log(`Report: ${reportPath}`);
+  flushBudgetDiagnosticsSummary();
 
   if (score.criticalFailedIds.length > 0) {
     process.exit(2);
@@ -132,6 +136,7 @@ async function main() {
 }
 
 main().catch((error) => {
+  flushBudgetDiagnosticsSummary();
   console.error("Eval run failed.");
   console.error(error instanceof Error ? error.message : String(error));
   process.exit(1);

@@ -11,6 +11,29 @@
 
 // 1 token ≈ 4 UTF-8 characters in English prose
 const CHARS_PER_TOKEN = 4;
+const BUDGET_SUMMARY_DEBOUNCE_MS = 250;
+
+type BudgetDiagnosticsMode = "off" | "summary" | "verbose";
+
+interface BudgetDocSummary {
+  slug: string;
+  estimatedTokens: number;
+}
+
+interface BudgetTrimEvent {
+  available: number;
+  used: number;
+  candidateTotal: number;
+  kept: BudgetDocSummary[];
+  dropped: BudgetDocSummary[];
+}
+
+const budgetTrimPatterns = new Map<
+  string,
+  { count: number; event: BudgetTrimEvent }
+>();
+let budgetSummaryTimer: ReturnType<typeof setTimeout> | null = null;
+let budgetExitHookRegistered = false;
 
 /** Rough token count for a string. */
 export function estimateTokens(text: string): number {
@@ -21,6 +44,91 @@ export interface TokenEstimate {
   slug: string;
   title: string;
   estimatedTokens: number;
+}
+
+function getBudgetDiagnosticsMode(): BudgetDiagnosticsMode {
+  const raw = process.env.G52_BUDGET_DIAGNOSTICS?.trim().toLowerCase();
+  if (raw === "summary" || raw === "verbose" || raw === "off") {
+    return raw;
+  }
+  return "off";
+}
+
+function formatDocs(items: BudgetDocSummary[]): string {
+  return items.map((item) => `${item.slug}(${item.estimatedTokens})`).join(", ");
+}
+
+function formatBudgetTrimEvent(event: BudgetTrimEvent): string {
+  return (
+    `[budget] Token budget exceeded — used ${event.used}/${event.available} tokens; ` +
+    `candidate total ${event.candidateTotal}; ` +
+    `kept: ${formatDocs(event.kept)}; ` +
+    `dropped: ${formatDocs(event.dropped)}`
+  );
+}
+
+function ensureBudgetExitHook() {
+  if (budgetExitHookRegistered) {
+    return;
+  }
+  budgetExitHookRegistered = true;
+  process.once("exit", () => {
+    flushBudgetDiagnosticsSummary();
+  });
+}
+
+function queueBudgetSummaryFlush() {
+  if (budgetSummaryTimer) {
+    return;
+  }
+
+  ensureBudgetExitHook();
+  budgetSummaryTimer = setTimeout(() => {
+    budgetSummaryTimer = null;
+    flushBudgetDiagnosticsSummary();
+  }, BUDGET_SUMMARY_DEBOUNCE_MS);
+  budgetSummaryTimer.unref?.();
+}
+
+function recordBudgetTrim(event: BudgetTrimEvent) {
+  const key = JSON.stringify(event);
+  const existing = budgetTrimPatterns.get(key);
+  if (existing) {
+    existing.count += 1;
+  } else {
+    budgetTrimPatterns.set(key, { count: 1, event });
+  }
+  queueBudgetSummaryFlush();
+}
+
+export function flushBudgetDiagnosticsSummary() {
+  if (budgetSummaryTimer) {
+    clearTimeout(budgetSummaryTimer);
+    budgetSummaryTimer = null;
+  }
+
+  if (budgetTrimPatterns.size === 0) {
+    return;
+  }
+
+  const patterns = [...budgetTrimPatterns.values()].sort((a, b) => b.count - a.count);
+  const totalEvents = patterns.reduce((sum, pattern) => sum + pattern.count, 0);
+  const lines = patterns.map(
+    ({ count, event }) => `  - ${count}x ${formatBudgetTrimEvent(event).replace("[budget] Token budget exceeded — ", "")}`
+  );
+
+  console.warn(
+    `[budget] Trim summary — ${totalEvents} event(s), ${patterns.length} unique pattern(s)\n${lines.join("\n")}`
+  );
+  budgetTrimPatterns.clear();
+}
+
+export function resetBudgetDiagnosticsForTests() {
+  if (budgetSummaryTimer) {
+    clearTimeout(budgetSummaryTimer);
+    budgetSummaryTimer = null;
+  }
+  budgetTrimPatterns.clear();
 }
 
 /** Estimate token cost for a list of documents. Useful for debugging context size. */
@@ -74,16 +182,21 @@ export function trimToTokenBudget<T extends { content: string; slug: string }>(
     }
   }
 
-  if (dropped.length > 0 && process.env.NODE_ENV !== "test") {
-    const formatDocs = (items: Array<{ slug: string; estimatedTokens: number }>) =>
-      items.map((item) => `${item.slug}(${item.estimatedTokens})`).join(", ");
+  if (dropped.length > 0) {
+    const event: BudgetTrimEvent = {
+      available,
+      used,
+      candidateTotal,
+      kept,
+      dropped,
+    };
 
-    console.warn(
-      `[budget] Token budget exceeded — used ${used}/${available} tokens; ` +
-        `candidate total ${candidateTotal}; ` +
-        `kept: ${formatDocs(kept)}; ` +
-        `dropped: ${formatDocs(dropped)}`
-    );
+    const mode = getBudgetDiagnosticsMode();
+    if (mode === "verbose") {
+      console.warn(formatBudgetTrimEvent(event));
+    } else if (mode === "summary") {
+      recordBudgetTrim(event);
+    }
   }
 
   return result;

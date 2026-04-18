@@ -136,6 +136,8 @@ import {
   toSessionSummary,
 } from "./inquiryUtils";
 
+process.env.G52_BUDGET_DIAGNOSTICS ??= "summary";
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, "../../..");
 const REPORTS_DIR = path.join(REPO_ROOT, "packages", "evals", "reports");
