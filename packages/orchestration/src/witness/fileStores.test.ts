@@ -287,3 +287,73 @@ test("FileWitnessPublicationDeliveryStore round-trips delivery records and filte
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("FileWitnessPublicationDeliveryStore deterministically chooses the latest record when createdAt matches", async () => {
+  const root = await mkdtemp(
+    path.join(os.tmpdir(), "g52-witness-publication-delivery-latest-")
+  );
+
+  try {
+    const store = new FileWitnessPublicationDeliveryStore(root);
+    await store.create({
+      id: "delivery-a",
+      packageId: "bundle-2",
+      bundleId: "bundle-2",
+      witnessId: "wit-2",
+      testimonyId: "testimony-2",
+      backend: "azure-blob",
+      status: "succeeded",
+      createdAt: "2026-04-19T22:05:00.000Z",
+      remoteKey: "witness/wit-2/testimony/testimony-2/packages/bundle-2-a.zip",
+      remoteUrl: "https://example.invalid/container/bundle-2-a.zip",
+    });
+    const second = await store.create({
+      id: "delivery-b",
+      packageId: "bundle-2",
+      bundleId: "bundle-2",
+      witnessId: "wit-2",
+      testimonyId: "testimony-2",
+      backend: "azure-blob",
+      status: "failed",
+      createdAt: "2026-04-19T22:05:00.000Z",
+      remoteKey: "witness/wit-2/testimony/testimony-2/packages/bundle-2-b.zip",
+      error: "simulated failure",
+    });
+
+    assert.deepEqual(
+      (await store.list({ packageId: "bundle-2" })).map((record) => record.id),
+      ["delivery-a", "delivery-b"]
+    );
+    assert.equal((await store.findLatestByPackageId("bundle-2"))?.id, second.id);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("FileWitnessPublicationDeliveryStore persists failed delivery records", async () => {
+  const root = await mkdtemp(
+    path.join(os.tmpdir(), "g52-witness-publication-delivery-failed-")
+  );
+
+  try {
+    const store = new FileWitnessPublicationDeliveryStore(root);
+    const failed = await store.create({
+      packageId: "bundle-3",
+      bundleId: "bundle-3",
+      witnessId: "wit-3",
+      testimonyId: "testimony-3",
+      backend: "azure-blob",
+      status: "failed",
+      createdAt: "2026-04-19T22:10:00.000Z",
+      remoteKey: "witness/wit-3/testimony/testimony-3/packages/bundle-3.zip",
+      error: "remote upload failed",
+    });
+
+    const loaded = await store.load(failed.id);
+    assert.equal(loaded?.status, "failed");
+    assert.equal(loaded?.error, "remote upload failed");
+    assert.equal((await store.findLatestByPackageId("bundle-3"))?.id, failed.id);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});

@@ -26,6 +26,17 @@ export class FileWitnessPublicationDeliveryStore
 {
   constructor(private readonly rootDir: string) {}
 
+  private compareRecords(
+    a: PublicationDeliveryRecord,
+    b: PublicationDeliveryRecord
+  ): number {
+    return (
+      a.createdAt.localeCompare(b.createdAt) ||
+      a.updatedAt.localeCompare(b.updatedAt) ||
+      a.id.localeCompare(b.id)
+    );
+  }
+
   private recordsDir(): string {
     return path.join(this.rootDir, "delivery-records");
   }
@@ -73,7 +84,7 @@ export class FileWitnessPublicationDeliveryStore
             (!filters?.testimonyId ||
               record.testimonyId === filters.testimonyId)
         )
-        .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+        .sort((a, b) => this.compareRecords(a, b));
     } catch (error) {
       const code = (error as NodeJS.ErrnoException).code;
       if (code === "ENOENT") {
