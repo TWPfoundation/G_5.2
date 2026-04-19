@@ -881,6 +881,18 @@ test("publication bundle endpoints create and list witness export bundles", asyn
     assert.equal(created.json?.witnessId, witnessId);
     assert.equal(created.json?.testimonyId, testimonyId);
     assert.equal(created.json?.archiveCandidateId, setup.archiveCandidateId);
+    assert.match(
+      created.json?.bundleJsonPath ?? "",
+      new RegExp(
+        `${registry.witness.publicationBundleRoot!.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}.*\\.json$`
+      )
+    );
+    assert.match(
+      created.json?.bundleMarkdownPath ?? "",
+      new RegExp(
+        `${registry.witness.publicationBundleRoot!.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}.*\\.md$`
+      )
+    );
     assert.ok((created.json?.bundleJsonPath ?? "").endsWith(".json"));
     assert.ok((created.json?.bundleMarkdownPath ?? "").endsWith(".md"));
 

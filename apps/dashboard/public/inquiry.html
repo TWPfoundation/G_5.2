@@ -352,6 +352,9 @@ function activeWitnessPublicationBundles(){
   const active=activeWitnessTestimony();
   return active?state.witnessPublicationBundles.filter(item=>item.testimonyId===active.id):[];
 }
+function publicationBundlesForArchiveCandidate(archiveCandidateId){
+  return activeWitnessPublicationBundles().filter(item=>item.archiveCandidateId===archiveCandidateId);
+}
 function latestWitnessDecision(scope){
   return [...state.witnessConsent]
     .flatMap(record=>(record.decisions||[]).map(decision=>({record,decision})))
@@ -809,12 +812,22 @@ function renderWitnessCard(){
       <div class="value">${esc(active.title||`Session ${active.sessionId.slice(0,8)}`)}</div>
       <div class="meta">${publicationReadyCandidates.length} publication-ready archive candidate${publicationReadyCandidates.length===1?"":"s"} · ${publicationBundles.length} bundle${publicationBundles.length===1?"":"s"}</div>
       ${publicationReadyCandidates.length?`<div class="rerun-row" style="margin-top:8px">
-        ${publicationReadyCandidates.map(item=>`<button class="btn quiet" data-witness-publication-bundle-create="${esc(item.id)}">Create publication bundle ${esc(item.id.slice(0,8))}</button>`).join("")}
+        ${publicationReadyCandidates.map(item=>{
+          const existingBundles=publicationBundlesForArchiveCandidate(item.id);
+          return `<div class="context" style="min-width:220px">
+            <div class="label">Archive candidate ${esc(item.id.slice(0,8))}</div>
+            <div class="meta">${existingBundles.length?`${existingBundles.length} existing bundle${existingBundles.length===1?"":"s"}`:"No bundles yet"}</div>
+            <div class="rerun-row" style="margin-top:8px">
+              <button class="btn quiet" data-witness-publication-bundle-create="${esc(item.id)}">Create publication bundle</button>
+            </div>
+          </div>`;
+        }).join("")}
       </div>`:'<div class="meta" style="margin-top:8px">No publication-ready archive candidates for this testimony yet.</div>'}
     </div>
     ${publicationBundles.length?publicationBundles.map(item=>`
       <div class="context">
         <div class="label">${esc(item.status)} · ${esc(item.id.slice(0,8))}</div>
+        <div class="value">Archive candidate: ${esc(item.archiveCandidateId)}</div>
         <div class="value">JSON: ${esc(item.bundleJsonPath)}</div>
         <div class="value">Markdown: ${esc(item.bundleMarkdownPath||"-")}</div>
       </div>`).join(""):'<div class="meta">No publication bundles yet for this testimony.</div>'}
