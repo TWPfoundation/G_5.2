@@ -397,6 +397,10 @@ function isValidUuid(value: string): boolean {
   );
 }
 
+function isValidWitnessScopedId(value: string): boolean {
+  return /^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(value);
+}
+
 function witnessMissingScopes(error: unknown): string[] | null {
   const maybe = error as Error & { missingScopes?: string[] };
   return Array.isArray(maybe.missingScopes) ? maybe.missingScopes : null;
@@ -1997,6 +2001,19 @@ export async function handleRequest(
       const witnessId = url.searchParams.get("witnessId")?.trim();
       const testimonyId = url.searchParams.get("testimonyId")?.trim();
 
+      if (bundleId && !isValidUuid(bundleId)) {
+        sendJson(res, 400, { error: "Malformed publication bundle id" });
+        return;
+      }
+      if (witnessId && !isValidWitnessScopedId(witnessId)) {
+        sendJson(res, 400, { error: "Malformed witness id" });
+        return;
+      }
+      if (testimonyId && !isValidWitnessScopedId(testimonyId)) {
+        sendJson(res, 400, { error: "Malformed testimony id" });
+        return;
+      }
+
       if (bundleId) {
         items = items.filter((record) => record.bundleId === bundleId);
       }
@@ -2092,6 +2109,10 @@ export async function handleRequest(
         typeof body.bundleId === "string" ? body.bundleId.trim() : "";
       if (!bundleId) {
         sendJson(res, 400, { error: "bundleId is required" });
+        return;
+      }
+      if (!isValidUuid(bundleId)) {
+        sendJson(res, 400, { error: "Malformed publication bundle id" });
         return;
       }
 

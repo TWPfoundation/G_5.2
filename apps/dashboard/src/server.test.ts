@@ -1426,6 +1426,36 @@ test("publication package endpoints return 400 for malformed package ids", async
   assert.equal(fileResponse.status, 400);
 });
 
+test("publication package endpoints return 400 for malformed filter ids and create bundle ids", async () => {
+  const malformedBundleId = "not-a-valid-bundle-id";
+  const malformedWitnessId = "wit bad";
+  const malformedTestimonyId = "testimony bad";
+
+  const malformedBundleList = await requestJson(
+    `/api/witness/publication-packages?bundleId=${encodeURIComponent(malformedBundleId)}`
+  );
+  assert.equal(malformedBundleList.response.status, 400);
+
+  const malformedWitnessList = await requestJson(
+    `/api/witness/publication-packages?witnessId=${encodeURIComponent(malformedWitnessId)}`
+  );
+  assert.equal(malformedWitnessList.response.status, 400);
+
+  const malformedTestimonyList = await requestJson(
+    `/api/witness/publication-packages?testimonyId=${encodeURIComponent(malformedTestimonyId)}`
+  );
+  assert.equal(malformedTestimonyList.response.status, 400);
+
+  const malformedCreate = await requestJson("/api/witness/publication-packages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      bundleId: malformedBundleId,
+    }),
+  });
+  assert.equal(malformedCreate.response.status, 400);
+});
+
 test("publication bundle json endpoint serves legacy 0.1.0 artifacts unchanged", async () => {
   const bundleId = `bundle-${randomUUID()}`;
   const exportsRoot = path.join(registry.witness.publicationBundleRoot!, "exports");
