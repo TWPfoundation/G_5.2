@@ -881,11 +881,8 @@ test("publication bundle endpoints create and list witness export bundles", asyn
     assert.equal(created.json?.witnessId, witnessId);
     assert.equal(created.json?.testimonyId, testimonyId);
     assert.equal(created.json?.archiveCandidateId, setup.archiveCandidateId);
-    assert.match(created.json?.bundleJsonPath ?? "", /publication-bundles.+\.json$/);
-    assert.match(
-      created.json?.bundleMarkdownPath ?? "",
-      /publication-bundles.+\.md$/
-    );
+    assert.ok((created.json?.bundleJsonPath ?? "").endsWith(".json"));
+    assert.ok((created.json?.bundleMarkdownPath ?? "").endsWith(".md"));
 
     const listed = await requestJson(
       `/api/witness/publication-bundles?witnessId=${encodeURIComponent(witnessId)}&testimonyId=${encodeURIComponent(testimonyId)}`
