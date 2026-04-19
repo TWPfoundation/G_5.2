@@ -14,6 +14,7 @@ import {
 } from "./fileTestimonyStore";
 import { FileWitnessPublicationBundleStore } from "./fileDraftStores";
 import { FileWitnessPublicationPackageStore } from "./filePublicationPackageStore";
+import { FileWitnessPublicationDeliveryStore } from "./filePublicationDeliveryStore";
 import { FileWitnessArchiveCandidateStore } from "./fileArchiveCandidateStore";
 
 test("FileWitnessConsentStore appends decisions and filters by witness", async () => {
@@ -249,6 +250,37 @@ test("FileWitnessPublicationPackageStore round-trips package records", async () 
     assert.equal((await store.findByBundleId("bundle-1"))?.id, created.id);
     assert.deepEqual(
       (await store.list()).map((record) => record.id),
+      [created.id]
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("FileWitnessPublicationDeliveryStore round-trips delivery records and filters by package id", async () => {
+  const root = await mkdtemp(
+    path.join(os.tmpdir(), "g52-witness-publication-delivery-store-")
+  );
+
+  try {
+    const store = new FileWitnessPublicationDeliveryStore(root);
+    const created = await store.create({
+      packageId: "bundle-1",
+      bundleId: "bundle-1",
+      witnessId: "wit-1",
+      testimonyId: "testimony-1",
+      backend: "azure-blob",
+      status: "succeeded",
+      createdAt: "2026-04-19T22:00:00.000Z",
+      remoteKey: "witness/wit-1/testimony/testimony-1/packages/bundle-1.zip",
+      remoteUrl: "https://example.invalid/container/bundle-1.zip",
+    });
+
+    assert.equal(created.status, "succeeded");
+    assert.equal((await store.load(created.id))?.packageId, "bundle-1");
+    assert.equal((await store.findLatestByPackageId("bundle-1"))?.id, created.id);
+    assert.deepEqual(
+      (await store.list({ packageId: "bundle-1" })).map((record) => record.id),
       [created.id]
     );
   } finally {

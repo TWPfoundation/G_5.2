@@ -51,3 +51,9 @@ export type {
   PublicationPackageStatus,
   PublicationPackageStore,
 } from "./publicationPackage";
+export type {
+  PublicationDeliveryBackend,
+  PublicationDeliveryRecord,
+  PublicationDeliveryStatus,
+  PublicationDeliveryStore,
+} from "./publicationDelivery";
