@@ -289,6 +289,19 @@ It should not:
 
 That keeps the package as the transport-neutral handoff object and prevents one remote target from becoming the de facto schema authority.
 
+## Final Implementation Notes
+
+The implemented slice stayed faithful to this design, but a few details are worth recording explicitly so the spec matches the behavior that shipped:
+
+- package id equals bundle id in practice
+  The final implementation uses the source publication bundle id as the `PublicationPackageRecord.id`, which fits the one-package-per-bundle rule.
+- deterministic filename uses the bundle timestamp
+  The package filename is derived from `bundle.createdAt`, while `PublicationPackageRecord.createdAt` remains the package creation time.
+- the package README is intentionally minimal
+  The shipped `README.txt` is a short identity and contents note rather than a fuller operator guidance document.
+- repeated create requests are idempotent, but `201` versus `200` is not a hard concurrency guarantee
+  The artifact and record layer converge on one package per bundle, while the HTTP status code should be treated as best-effort under concurrent requests rather than a strict transport-level guarantee.
+
 ## Recommendation
 
 Build the local zip package now as the handoff artifact of record.

@@ -1003,6 +1003,21 @@ git commit -m "docs: cover witness packaged export workflow"
   - `PublicationPackageRecord` and `FileWitnessPublicationPackageStore` are introduced before runtime/server/UI use them
   - `packageSha256`, `packageByteSize`, `packageFilename`, and `bundleId` are used consistently across store, runtime, server, UI, smoke, and docs
 
+## Final Implementation Notes
+
+The final implementation kept the intended architecture, but these details are worth pinning explicitly so the plan reads cleanly against the code that landed:
+
+- `PublicationPackageRecord.id` is effectively the same as `bundleId`
+  The final implementation converges on one package per bundle by using the bundle id as the package record identity.
+- deterministic package filenames are derived from `bundle.createdAt`
+  Filename stability is based on the source publication bundle timestamp, not the package record timestamp.
+- `PublicationPackageRecord.createdAt` is the package creation time
+  This remains separate from the bundle timestamp used to derive the deterministic filename.
+- `README.txt` inside the package is intentionally minimal
+  The final implementation keeps it as a short operator-facing inventory and identity note rather than a fuller transport-policy explanation.
+- repeated create requests are idempotent at the artifact and record layer
+  The runtime and store converge on one package per bundle, but `201` versus `200` should not be treated as a strict concurrency guarantee at the HTTP transport layer.
+
 ## Execution Handoff
 
 Plan complete and saved to `docs/superpowers/plans/2026-04-19-witness-packaged-export.md`. Two execution options:
