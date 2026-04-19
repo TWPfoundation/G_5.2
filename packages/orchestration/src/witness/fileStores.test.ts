@@ -13,6 +13,7 @@ import {
   appendTurnToTestimony,
 } from "./fileTestimonyStore";
 import { FileWitnessPublicationBundleStore } from "./fileDraftStores";
+import { FileWitnessPublicationPackageStore } from "./filePublicationPackageStore";
 import { FileWitnessArchiveCandidateStore } from "./fileArchiveCandidateStore";
 
 test("FileWitnessConsentStore appends decisions and filters by witness", async () => {
@@ -211,6 +212,45 @@ test("FileWitnessPublicationBundleStore round-trips bundle records", async () =>
     assert.equal(await store.delete(created.id), true);
     assert.equal(await store.load(created.id), null);
     assert.equal((await store.list()).length, 1);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("FileWitnessPublicationPackageStore round-trips package records", async () => {
+  const root = await mkdtemp(
+    path.join(os.tmpdir(), "g52-witness-publication-package-")
+  );
+
+  try {
+    const store = new FileWitnessPublicationPackageStore(root);
+    const created = await store.create({
+      bundleId: "bundle-1",
+      witnessId: "wit-package",
+      testimonyId: "testimony-package",
+      archiveCandidateId: "candidate-package",
+      createdAt: "2026-04-19T10:00:00.000Z",
+      packagePath: "data/witness/publication-packages/package-1.zip",
+      packageFilename: "package-1.zip",
+      packageSha256:
+        "1111111111111111111111111111111111111111111111111111111111111111",
+      packageByteSize: 42,
+      sourceBundleJsonPath: "data/witness/publication-bundles/bundle-1.json",
+      sourceBundleMarkdownPath: "data/witness/publication-bundles/bundle-1.md",
+      sourceBundleManifestPath:
+        "data/witness/publication-bundles/bundle-1-manifest.json",
+    });
+
+    assert.equal(created.status, "created");
+    assert.equal(
+      (await store.load(created.id))?.packageSha256,
+      created.packageSha256
+    );
+    assert.equal((await store.findByBundleId("bundle-1"))?.id, created.id);
+    assert.deepEqual(
+      (await store.list()).map((record) => record.id),
+      [created.id]
+    );
   } finally {
     await rm(root, { recursive: true, force: true });
   }
