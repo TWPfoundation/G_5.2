@@ -1,6 +1,5 @@
 import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { randomUUID } from "node:crypto";
 
 import type {
   PublicationPackageRecord,
@@ -106,8 +105,8 @@ export class FileWitnessPublicationPackageStore
     input: CreatePublicationPackageInput
   ): Promise<PublicationPackageRecord> {
     const now = input.createdAt;
-    return this.save({
-      id: input.id ?? randomUUID(),
+    const record: PublicationPackageRecord = {
+      id: input.id ?? input.bundleId,
       bundleId: input.bundleId,
       witnessId: input.witnessId,
       testimonyId: input.testimonyId,
@@ -122,6 +121,25 @@ export class FileWitnessPublicationPackageStore
       sourceBundleJsonPath: input.sourceBundleJsonPath,
       sourceBundleMarkdownPath: input.sourceBundleMarkdownPath,
       sourceBundleManifestPath: input.sourceBundleManifestPath,
-    });
+    };
+
+    await mkdir(this.recordsDir(), { recursive: true });
+    try {
+      await writeFile(
+        this.filePath(record.id),
+        `${JSON.stringify(record, null, 2)}\n`,
+        { encoding: "utf8", flag: "wx" }
+      );
+      return record;
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code === "EEXIST") {
+        const existing = await this.load(record.id);
+        if (existing) {
+          return existing;
+        }
+      }
+      throw error;
+    }
   }
 }

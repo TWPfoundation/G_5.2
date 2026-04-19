@@ -120,6 +120,22 @@ class ThrowingPublicationPackageStore extends FileWitnessPublicationPackageStore
   }
 }
 
+class DelayedPublicationPackageStore extends FileWitnessPublicationPackageStore {
+  constructor(
+    rootDir: string,
+    private readonly delayMs: number
+  ) {
+    super(rootDir);
+  }
+
+  override async create(
+    input: Parameters<FileWitnessPublicationPackageStore["create"]>[0]
+  ) {
+    await new Promise((resolve) => setTimeout(resolve, this.delayMs));
+    return super.create(input);
+  }
+}
+
 async function seedPublicationBundleFixture(
   root: string,
   input: {
@@ -301,6 +317,49 @@ test("PublicationPackage createWitnessPublicationPackage creates a deterministic
       manifestEntry.bytes.toString("utf8"),
       await readFile(fixture.bundle.bundleManifestPath, "utf8")
     );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("PublicationPackage createWitnessPublicationPackage collapses concurrent creates for the same bundle into one package record", async () => {
+  const root = await mkdtemp(
+    path.join(os.tmpdir(), "g52-witness-publication-package-concurrent-")
+  );
+
+  try {
+    const fixture = await seedPublicationBundleFixture(root, {
+      bundleId: "bundle-concurrent",
+      createdAt: "2026-04-19T16:31:00.000Z",
+    });
+    const publicationPackageStore = new DelayedPublicationPackageStore(
+      fixture.publicationBundleRoot,
+      75
+    );
+
+    const [firstPackage, secondPackage] = await Promise.all([
+      createWitnessPublicationPackage({
+        publicationBundleRoot: fixture.publicationBundleRoot,
+        bundleId: fixture.bundle.id,
+        publicationBundleStore: fixture.publicationBundleStore,
+        publicationPackageStore,
+      }),
+      createWitnessPublicationPackage({
+        publicationBundleRoot: fixture.publicationBundleRoot,
+        bundleId: fixture.bundle.id,
+        publicationBundleStore: fixture.publicationBundleStore,
+        publicationPackageStore,
+      }),
+    ]);
+
+    const records = await publicationPackageStore.list();
+    const packageIds = new Set([firstPackage.id, secondPackage.id]);
+
+    assert.equal(packageIds.size, 1);
+    assert.equal(records.length, 1);
+    assert.equal(records[0]?.id, firstPackage.id);
+    assert.equal(secondPackage.id, firstPackage.id);
+    assert.equal(secondPackage.packagePath, firstPackage.packagePath);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

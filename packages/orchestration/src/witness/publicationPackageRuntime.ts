@@ -1,5 +1,5 @@
-import { createHash } from "node:crypto";
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { createHash, randomUUID } from "node:crypto";
+import { mkdir, readFile, rename, rm } from "node:fs/promises";
 import { createRequire } from "node:module";
 import path from "node:path";
 
@@ -196,23 +196,45 @@ export async function createWitnessPublicationPackage(
 
   const packageFilename = deterministicPackageFilename(bundle);
   const packagePath = path.join(packagesRoot, packageFilename);
+  const tempPackagePath = path.join(
+    packagesRoot,
+    `.tmp-${sanitizeFilenameComponent(bundle.id)}-${randomUUID()}.zip`
+  );
+  let packageWasPublished = false;
 
   try {
-    await writeDeterministicZip(packagePath, [
+    await writeDeterministicZip(tempPackagePath, [
       { name: "README.txt", bytes: Buffer.from(buildReadme(bundle), "utf8") },
       { name: "bundle.json", bytes: bundleJsonBody },
       { name: "bundle.md", bytes: bundleMarkdownBody },
       { name: "manifest.json", bytes: bundleManifestBody },
     ]);
 
-    const packageBytes = await readFile(packagePath);
+    const tempPackageBytes = await readFile(tempPackagePath);
+
+    try {
+      await rename(tempPackagePath, packagePath);
+      packageWasPublished = true;
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (!["EEXIST", "EPERM", "ENOTEMPTY"].includes(code ?? "")) {
+        throw error;
+      }
+      await rm(tempPackagePath, { force: true });
+    }
+
     await resolvePublicationPathWithinRoot(
       packagesRoot,
       packagePath,
       "Publication package path"
     );
 
+    const packageBytes = packageWasPublished
+      ? tempPackageBytes
+      : await readFile(packagePath);
+
     return await input.publicationPackageStore.create({
+      id: bundle.id,
       bundleId: bundle.id,
       witnessId: bundle.witnessId,
       testimonyId: bundle.testimonyId,
@@ -227,7 +249,10 @@ export async function createWitnessPublicationPackage(
       sourceBundleManifestPath: validatedPaths.bundleManifestPath,
     });
   } catch (error) {
-    await Promise.allSettled([rm(packagePath, { force: true })]);
+    await Promise.allSettled([
+      rm(tempPackagePath, { force: true }),
+      packageWasPublished ? rm(packagePath, { force: true }) : Promise.resolve(),
+    ]);
     throw error;
   }
 }
