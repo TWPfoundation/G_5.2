@@ -290,12 +290,12 @@ function buildPublicationBundleManifest(input: {
       json: {
         filename: input.jsonFilename,
         sha256: sha256(input.jsonBody),
-        contentType: "application/json",
+        contentType: "application/json; charset=utf-8",
       },
       markdown: {
         filename: input.markdownFilename,
         sha256: sha256(input.markdownBody),
-        contentType: "text/markdown",
+        contentType: "text/markdown; charset=utf-8",
       },
     },
   };

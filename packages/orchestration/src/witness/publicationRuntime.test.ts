@@ -19,6 +19,22 @@ function sha256(content: string): string {
   return createHash("sha256").update(content).digest("hex");
 }
 
+function buildTsxSpawnInvocation(
+  repoRoot: string,
+  scriptPath: string,
+  scriptArgs: string[]
+) {
+  return {
+    command: process.execPath,
+    args: [path.join(repoRoot, "node_modules", "tsx", "dist", "cli.mjs"), scriptPath, ...scriptArgs],
+    options: {
+      cwd: repoRoot,
+      encoding: "utf8" as const,
+      shell: false,
+    },
+  };
+}
+
 class ThrowingPublicationBundleStore extends FileWitnessPublicationBundleStore {
   override async create(
     _input: Parameters<FileWitnessPublicationBundleStore["create"]>[0]
@@ -227,12 +243,12 @@ test("PublicationBundle createWitnessPublicationBundle requires publication_read
     assert.deepEqual(manifest.exports.json, {
       filename: path.basename(bundle.bundleJsonPath),
       sha256: sha256(jsonBody),
-      contentType: "application/json",
+      contentType: "application/json; charset=utf-8",
     });
     assert.deepEqual(manifest.exports.markdown, {
       filename: path.basename(bundle.bundleMarkdownPath as string),
       sha256: sha256(markdownBody),
-      contentType: "text/markdown",
+      contentType: "text/markdown; charset=utf-8",
     });
 
     assert.deepEqual(await testimonyStore.load(testimony.id), beforeTestimony);
@@ -248,6 +264,24 @@ test("PublicationBundle createWitnessPublicationBundle requires publication_read
   } finally {
     await rm(root, { recursive: true, force: true });
   }
+});
+
+test("PublicationBundle write-failure regression helper uses node with the repo-local tsx cli", () => {
+  const repoRoot = path.join("repo", "root");
+  const scriptPath = path.join("tmp", "write-failure-regression.mjs");
+  const invocation = buildTsxSpawnInvocation(repoRoot, scriptPath, [repoRoot]);
+
+  assert.equal(invocation.command, process.execPath);
+  assert.deepEqual(invocation.args, [
+    path.join(repoRoot, "node_modules", "tsx", "dist", "cli.mjs"),
+    scriptPath,
+    repoRoot,
+  ]);
+  assert.deepEqual(invocation.options, {
+    cwd: repoRoot,
+    encoding: "utf8",
+    shell: false,
+  });
 });
 
 test("PublicationBundle createWitnessPublicationBundle rejects non-publication-ready candidates", async () => {
@@ -557,11 +591,11 @@ try {
       )
     );
 
-    const pnpmCmd = path.join(process.env.APPDATA ?? "", "npm", "pnpm.cmd");
+    const invocation = buildTsxSpawnInvocation(repoRoot, scriptPath, [repoRoot]);
     const result = spawnSync(
-      pnpmCmd,
-      ["exec", "tsx", scriptPath, repoRoot],
-      { encoding: "utf8", shell: true }
+      invocation.command,
+      invocation.args,
+      invocation.options
     );
 
     assert.equal(

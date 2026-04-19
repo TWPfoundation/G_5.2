@@ -1,7 +1,9 @@
 export interface PublicationBundleExportEntry {
   filename: string;
   sha256: string;
-  contentType: string;
+  contentType:
+    | "application/json; charset=utf-8"
+    | "text/markdown; charset=utf-8";
 }
 
 export interface PublicationBundleManifest {
