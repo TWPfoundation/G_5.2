@@ -1777,7 +1777,15 @@ export async function handleRequest(
     }
     try {
       const store = publicationBundleStoreFor(WITNESS_CONFIG);
-      const files = await fs.readdir(WITNESS_CONFIG.publicationBundleRoot!);
+      const files = await fs
+        .readdir(WITNESS_CONFIG.publicationBundleRoot!)
+        .catch((error) => {
+          const code = (error as NodeJS.ErrnoException).code;
+          if (code === "ENOENT") {
+            return [];
+          }
+          throw error;
+        });
       const items = (
         await Promise.all(
           files

@@ -4,7 +4,7 @@ import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { randomUUID } from "node:crypto";
-import { readdir, rm } from "node:fs/promises";
+import { readdir, rename, rm } from "node:fs/promises";
 
 import { FileMemoryStore } from "../../../packages/orchestration/src/memory/fileMemoryStore";
 import { defaultContextSnapshotRoot } from "../../../packages/orchestration/src/persistence/fileContextSnapshotStore";
@@ -911,6 +911,29 @@ test("publication bundle endpoints create and list witness export bundles", asyn
     );
   } finally {
     await cleanupWitnessArtifacts(witnessId, sessionId, turnId);
+  }
+});
+
+test("publication bundle listing returns 200 with an empty list when the bundle root is missing", async () => {
+  const publicationBundleRoot = registry.witness.publicationBundleRoot!;
+  const backupRoot = `${publicationBundleRoot}.bak-${randomUUID()}`;
+  let renamed = false;
+
+  try {
+    await rename(publicationBundleRoot, backupRoot);
+    renamed = true;
+
+    const listed = await requestJson(
+      `/api/witness/publication-bundles?witnessId=${encodeURIComponent(`wit-${randomUUID()}`)}&testimonyId=${encodeURIComponent(`test-${randomUUID()}`)}`
+    );
+
+    assert.equal(listed.response.status, 200);
+    assert.deepEqual(listed.json, []);
+  } finally {
+    if (renamed) {
+      await rm(publicationBundleRoot, { recursive: true, force: true });
+      await rename(backupRoot, publicationBundleRoot);
+    }
   }
 });
 
