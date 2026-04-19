@@ -1776,26 +1776,9 @@ export async function handleRequest(
       return;
     }
     try {
-      const store = publicationBundleStoreFor(WITNESS_CONFIG);
-      const files = await fs
-        .readdir(WITNESS_CONFIG.publicationBundleRoot!)
-        .catch((error) => {
-          const code = (error as NodeJS.ErrnoException).code;
-          if (code === "ENOENT") {
-            return [];
-          }
-          throw error;
-        });
-      const items = (
-        await Promise.all(
-          files
-            .filter((file) => file.endsWith(".json"))
-            .map((file) => store.load(file.slice(0, -".json".length)))
-        )
-      )
+      const items = (await publicationBundleStoreFor(WITNESS_CONFIG).list())
         .filter(
-          (record): record is NonNullable<typeof record> =>
-            record !== null &&
+          (record) =>
             record.witnessId === witnessId &&
             record.testimonyId === testimonyId
         )

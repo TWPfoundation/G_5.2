@@ -11,7 +11,7 @@ G_5.2 is built around four never-cross-contaminate boundaries:
 1. **Policy roots** live in `packages/canon/` for P-E-S and `packages/inquisitor-witness/` for Witness. They are the only source of truth for their respective governance packs.
 2. **Product-scoped runtime data** lives in `data/`. P-E-S and Witness session/memory roots are separate. These are *not* canon and never silently become canon.
 3. **Witness testimony + consent** live only in the Witness roots under `data/witness/`. They are operational records, not editorial canon.
-4. **Witness downstream review and export state** lives only in `data/witness/synthesis/`, `data/witness/annotations/`, `data/witness/archive-candidates/`, and `data/witness/publication-bundles/`. Archive-review, publication-ready, and publication-bundle records never imply canon promotion or public release by themselves.
+4. **Witness downstream review and export state** lives only in `data/witness/synthesis/`, `data/witness/annotations/`, `data/witness/archive-candidates/`, and `data/witness/publication-bundles/`. Publication bundle metadata records live under `data/witness/publication-bundles/records/`, while emitted JSON/Markdown artifacts live under `data/witness/publication-bundles/exports/`. Archive-review, publication-ready, and publication-bundle records never imply canon promotion or public release by themselves.
 5. **Eval reports** live in `packages/evals/reports/`. Promoted gold baselines live in `packages/evals/gold-baselines/`.
 
 The operator's job is to keep these four boundaries clean. Every operator action below is designed to preserve them.
@@ -148,7 +148,7 @@ Publication bundle APIs:
 - `GET /api/witness/publication-bundles?witnessId=...&testimonyId=...`
 - `GET /api/witness/publication-bundles/:id`
 
-The create call accepts `{ archiveCandidateId }` and writes a new bundle record plus emitted JSON / Markdown bundle files under `data/witness/publication-bundles/`. It packages already-reviewed Witness material for downstream operator handling without mutating the source testimony or any review records.
+The create call accepts `{ archiveCandidateId }` and writes a new bundle record under `data/witness/publication-bundles/records/` plus emitted JSON / Markdown bundle files under `data/witness/publication-bundles/exports/`. It packages already-reviewed Witness material for downstream operator handling without mutating the source testimony or any review records.
 
 ### 3.7 Manage durable memory
 

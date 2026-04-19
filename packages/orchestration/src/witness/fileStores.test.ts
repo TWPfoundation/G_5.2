@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import os from "node:os";
 import path from "node:path";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readdir, rm } from "node:fs/promises";
 
 import {
   FileWitnessConsentStore,
@@ -191,6 +191,10 @@ test("FileWitnessPublicationBundleStore round-trips bundle records", async () =>
     assert.equal(listed.length, 2);
     assert.equal(listed[0].id, created.id);
     assert.equal(listed[1].id, createdWithoutMarkdown.id);
+
+    const recordFiles = await readdir(path.join(root, "records"));
+    assert.equal(recordFiles.length, 2);
+    assert.ok(recordFiles.every((file) => file.endsWith(".json")));
 
     assert.equal(await store.delete(created.id), true);
     assert.equal(await store.load(created.id), null);

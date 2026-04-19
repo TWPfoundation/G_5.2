@@ -23,10 +23,10 @@ test("PublicationBundle createWitnessPublicationBundle requires publication_read
     const synthesisStore = new FileWitnessSynthesisStore(path.join(root, "synthesis"));
     const annotationStore = new FileWitnessAnnotationStore(path.join(root, "annotations"));
     const archiveCandidateStore = new FileWitnessArchiveCandidateStore(path.join(root, "archive"));
+    const publicationBundleRoot = path.join(root, "publication-bundles");
     const publicationBundleStore = new FileWitnessPublicationBundleStore(
-      path.join(root, "bundle-records")
+      publicationBundleRoot
     );
-    const publicationBundleRoot = path.join(root, "bundle-exports");
 
     const testimony = await testimonyStore.save({
       id: "testimony-publication",
@@ -86,7 +86,7 @@ test("PublicationBundle createWitnessPublicationBundle requires publication_read
       id: "candidate-publication",
       witnessId: testimony.witnessId,
       testimonyId: testimony.id,
-      testimonyUpdatedAt: "2026-04-19T09:04:30.000Z",
+      testimonyUpdatedAt: testimony.updatedAt,
       approvedSynthesisId: synthesis.id,
       approvedAnnotationId: annotation.id,
       createdAt: "2026-04-19T09:08:00.000Z",
@@ -118,8 +118,18 @@ test("PublicationBundle createWitnessPublicationBundle requires publication_read
     );
     assert.equal(bundle.sourceSynthesisId, synthesis.id);
     assert.equal(bundle.sourceAnnotationId, annotation.id);
-    assert.match(bundle.bundleJsonPath, /\.json$/);
-    assert.match(bundle.bundleMarkdownPath ?? "", /\.md$/);
+    assert.ok(
+      bundle.bundleJsonPath.startsWith(
+        path.join(publicationBundleRoot, "exports")
+      )
+    );
+    assert.ok(bundle.bundleJsonPath.endsWith(".json"));
+    assert.ok(
+      (bundle.bundleMarkdownPath ?? "").startsWith(
+        path.join(publicationBundleRoot, "exports")
+      )
+    );
+    assert.ok((bundle.bundleMarkdownPath ?? "").endsWith(".md"));
 
     const bundlePayload = JSON.parse(
       await readFile(bundle.bundleJsonPath, "utf8")
@@ -171,7 +181,7 @@ test("PublicationBundle createWitnessPublicationBundle rejects non-publication-r
     const annotationStore = new FileWitnessAnnotationStore(path.join(root, "annotations"));
     const archiveCandidateStore = new FileWitnessArchiveCandidateStore(path.join(root, "archive"));
     const publicationBundleStore = new FileWitnessPublicationBundleStore(
-      path.join(root, "bundle-records")
+      path.join(root, "publication-bundles")
     );
 
     await testimonyStore.save({
@@ -218,7 +228,7 @@ test("PublicationBundle createWitnessPublicationBundle rejects non-publication-r
     await assert.rejects(
       () =>
         createWitnessPublicationBundle({
-          publicationBundleRoot: path.join(root, "bundle-exports"),
+          publicationBundleRoot: path.join(root, "publication-bundles"),
           archiveCandidateId: archiveCandidate.id,
           testimonyStore,
           synthesisStore,
@@ -232,7 +242,7 @@ test("PublicationBundle createWitnessPublicationBundle rejects non-publication-r
     await assert.rejects(
       () =>
         createWitnessPublicationBundle({
-          publicationBundleRoot: path.join(root, "bundle-exports"),
+          publicationBundleRoot: path.join(root, "publication-bundles"),
           archiveCandidateId: "missing-candidate",
           testimonyStore,
           synthesisStore,
@@ -258,7 +268,7 @@ test("PublicationBundle createWitnessPublicationBundle rejects source records th
     const annotationStore = new FileWitnessAnnotationStore(path.join(root, "annotations"));
     const archiveCandidateStore = new FileWitnessArchiveCandidateStore(path.join(root, "archive"));
     const publicationBundleStore = new FileWitnessPublicationBundleStore(
-      path.join(root, "bundle-records")
+      path.join(root, "publication-bundles")
     );
 
     const testimony = await testimonyStore.save({
@@ -305,7 +315,7 @@ test("PublicationBundle createWitnessPublicationBundle rejects source records th
     await assert.rejects(
       () =>
         createWitnessPublicationBundle({
-          publicationBundleRoot: path.join(root, "bundle-exports"),
+          publicationBundleRoot: path.join(root, "publication-bundles"),
           archiveCandidateId: archiveCandidate.id,
           testimonyStore,
           synthesisStore,
@@ -328,7 +338,7 @@ test("PublicationBundle createWitnessPublicationBundle rejects source records th
     await assert.rejects(
       () =>
         createWitnessPublicationBundle({
-          publicationBundleRoot: path.join(root, "bundle-exports"),
+          publicationBundleRoot: path.join(root, "publication-bundles"),
           archiveCandidateId: archiveCandidate.id,
           testimonyStore,
           synthesisStore,
@@ -351,7 +361,7 @@ test("PublicationBundle createWitnessPublicationBundle rejects source records th
     await assert.rejects(
       () =>
         createWitnessPublicationBundle({
-          publicationBundleRoot: path.join(root, "bundle-exports"),
+          publicationBundleRoot: path.join(root, "publication-bundles"),
           archiveCandidateId: archiveCandidate.id,
           testimonyStore,
           synthesisStore,
@@ -377,7 +387,7 @@ test("PublicationBundle createWitnessPublicationBundle rejects referential misma
     const annotationStore = new FileWitnessAnnotationStore(path.join(root, "annotations"));
     const archiveCandidateStore = new FileWitnessArchiveCandidateStore(path.join(root, "archive"));
     const publicationBundleStore = new FileWitnessPublicationBundleStore(
-      path.join(root, "bundle-records")
+      path.join(root, "publication-bundles")
     );
 
     const testimony = await testimonyStore.save({
@@ -424,7 +434,7 @@ test("PublicationBundle createWitnessPublicationBundle rejects referential misma
     await assert.rejects(
       () =>
         createWitnessPublicationBundle({
-          publicationBundleRoot: path.join(root, "bundle-exports"),
+          publicationBundleRoot: path.join(root, "publication-bundles"),
           archiveCandidateId: archiveCandidate.id,
           testimonyStore,
           synthesisStore,
@@ -444,7 +454,7 @@ test("PublicationBundle createWitnessPublicationBundle rejects referential misma
     await assert.rejects(
       () =>
         createWitnessPublicationBundle({
-          publicationBundleRoot: path.join(root, "bundle-exports"),
+          publicationBundleRoot: path.join(root, "publication-bundles"),
           archiveCandidateId: archiveCandidate.id,
           testimonyStore,
           synthesisStore,
@@ -468,7 +478,7 @@ test("PublicationBundle createWitnessPublicationBundle rejects referential misma
     await assert.rejects(
       () =>
         createWitnessPublicationBundle({
-          publicationBundleRoot: path.join(root, "bundle-exports"),
+          publicationBundleRoot: path.join(root, "publication-bundles"),
           archiveCandidateId: archiveCandidate.id,
           testimonyStore,
           synthesisStore,
@@ -477,6 +487,80 @@ test("PublicationBundle createWitnessPublicationBundle rejects referential misma
           publicationBundleStore,
         }),
       /annotation.*candidate/i
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("PublicationBundle createWitnessPublicationBundle rejects testimony updatedAt drift from the pinned archive candidate value", async () => {
+  const root = await mkdtemp(
+    path.join(os.tmpdir(), "g52-witness-publication-runtime-provenance-")
+  );
+
+  try {
+    const testimonyStore = new FileWitnessTestimonyStore(path.join(root, "testimony"));
+    const synthesisStore = new FileWitnessSynthesisStore(path.join(root, "synthesis"));
+    const annotationStore = new FileWitnessAnnotationStore(path.join(root, "annotations"));
+    const archiveCandidateStore = new FileWitnessArchiveCandidateStore(path.join(root, "archive"));
+    const publicationBundleRoot = path.join(root, "publication-bundles");
+    const publicationBundleStore = new FileWitnessPublicationBundleStore(
+      publicationBundleRoot
+    );
+
+    const testimony = await testimonyStore.save({
+      id: "testimony-provenance",
+      witnessId: "wit-provenance",
+      sessionId: "session-provenance",
+      state: "sealed",
+      createdAt: "2026-04-19T13:00:00.000Z",
+      updatedAt: "2026-04-19T13:05:00.000Z",
+      segments: [],
+    });
+    const synthesis = await synthesisStore.save({
+      id: "synth-provenance",
+      witnessId: testimony.witnessId,
+      testimonyId: testimony.id,
+      createdAt: "2026-04-19T13:06:00.000Z",
+      updatedAt: "2026-04-19T13:06:00.000Z",
+      status: "approved",
+      source: "model",
+      text: "Approved synthesis",
+    });
+    const annotation = await annotationStore.save({
+      id: "annot-provenance",
+      witnessId: testimony.witnessId,
+      testimonyId: testimony.id,
+      createdAt: "2026-04-19T13:07:00.000Z",
+      updatedAt: "2026-04-19T13:07:00.000Z",
+      status: "approved",
+      source: "model",
+      entries: [],
+    });
+    const archiveCandidate = await archiveCandidateStore.save({
+      id: "candidate-provenance",
+      witnessId: testimony.witnessId,
+      testimonyId: testimony.id,
+      testimonyUpdatedAt: "2026-04-19T13:04:30.000Z",
+      approvedSynthesisId: synthesis.id,
+      approvedAnnotationId: annotation.id,
+      createdAt: "2026-04-19T13:08:00.000Z",
+      updatedAt: "2026-04-19T13:09:00.000Z",
+      status: "publication_ready",
+    });
+
+    await assert.rejects(
+      () =>
+        createWitnessPublicationBundle({
+          publicationBundleRoot,
+          archiveCandidateId: archiveCandidate.id,
+          testimonyStore,
+          synthesisStore,
+          annotationStore,
+          archiveCandidateStore,
+          publicationBundleStore,
+        }),
+      /testimony updatedAt must match the archive candidate/i
     );
   } finally {
     await rm(root, { recursive: true, force: true });

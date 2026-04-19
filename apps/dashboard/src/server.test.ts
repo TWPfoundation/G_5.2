@@ -87,18 +87,9 @@ async function cleanupWitnessArtifacts(
       .map((record) => archiveCandidateStore.delete(record.id))
   );
 
-  const publicationBundleFiles = await readdir(
-    registry.witness.publicationBundleRoot!
-  ).catch(() => []);
-  const publicationBundles = (
-    await Promise.all(
-      publicationBundleFiles
-        .filter((file) => file.endsWith(".json"))
-        .map(async (file) =>
-          publicationBundleStore.load(file.slice(0, -".json".length))
-        )
-    )
-  ).filter((record) => record?.witnessId === witnessId);
+  const publicationBundles = (await publicationBundleStore.list()).filter(
+    (record) => record.witnessId === witnessId
+  );
   await Promise.all(
     publicationBundles
       .flatMap((record) => {
@@ -884,13 +875,13 @@ test("publication bundle endpoints create and list witness export bundles", asyn
     assert.match(
       created.json?.bundleJsonPath ?? "",
       new RegExp(
-        `${registry.witness.publicationBundleRoot!.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}.*\\.json$`
+        `${path.join(registry.witness.publicationBundleRoot!, "exports").replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}.*\\.json$`
       )
     );
     assert.match(
       created.json?.bundleMarkdownPath ?? "",
       new RegExp(
-        `${registry.witness.publicationBundleRoot!.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}.*\\.md$`
+        `${path.join(registry.witness.publicationBundleRoot!, "exports").replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}.*\\.md$`
       )
     );
     assert.ok((created.json?.bundleJsonPath ?? "").endsWith(".json"));

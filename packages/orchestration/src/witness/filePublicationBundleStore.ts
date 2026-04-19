@@ -24,8 +24,12 @@ export class FileWitnessPublicationBundleStore
 {
   constructor(private readonly rootDir: string) {}
 
+  private recordsDir(): string {
+    return path.join(this.rootDir, "records");
+  }
+
   private filePath(recordId: string): string {
-    return path.join(this.rootDir, `${recordId}.json`);
+    return path.join(this.recordsDir(), `${recordId}.json`);
   }
 
   async load(bundleId: string): Promise<PublicationBundleRecord | null> {
@@ -43,12 +47,12 @@ export class FileWitnessPublicationBundleStore
 
   async list(): Promise<PublicationBundleRecord[]> {
     try {
-      const files = await readdir(this.rootDir);
+      const files = await readdir(this.recordsDir());
       const records = await Promise.all(
         files
           .filter((file) => file.endsWith(".json"))
           .map(async (file) => {
-            const raw = await readFile(path.join(this.rootDir, file), "utf8");
+            const raw = await readFile(path.join(this.recordsDir(), file), "utf8");
             return JSON.parse(raw) as PublicationBundleRecord;
           })
       );
@@ -65,7 +69,7 @@ export class FileWitnessPublicationBundleStore
   async save(
     record: PublicationBundleRecord
   ): Promise<PublicationBundleRecord> {
-    await mkdir(this.rootDir, { recursive: true });
+    await mkdir(this.recordsDir(), { recursive: true });
     await writeFile(
       this.filePath(record.id),
       `${JSON.stringify(record, null, 2)}\n`,

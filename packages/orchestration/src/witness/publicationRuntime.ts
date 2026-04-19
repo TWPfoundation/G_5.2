@@ -140,6 +140,11 @@ function assertSourceRecordConsistency(
   synthesis: SynthesisRecord,
   annotation: AnnotationRecord
 ) {
+  if (testimony.updatedAt !== archiveCandidate.testimonyUpdatedAt) {
+    throw new Error(
+      "Witness publication bundle testimony updatedAt must match the archive candidate."
+    );
+  }
   if (testimony.witnessId !== archiveCandidate.witnessId) {
     throw new Error(
       "Witness publication bundle testimony witness id must match the archive candidate."
@@ -221,16 +226,17 @@ export async function createWitnessPublicationBundle(
     archiveCandidate
   );
   const exportId = randomUUID();
+  const exportRoot = path.join(input.publicationBundleRoot, "exports");
   const bundleJsonPath = path.join(
-    input.publicationBundleRoot,
+    exportRoot,
     `${archiveCandidate.id}-${exportId}.json`
   );
   const bundleMarkdownPath = path.join(
-    input.publicationBundleRoot,
+    exportRoot,
     `${archiveCandidate.id}-${exportId}.md`
   );
 
-  await mkdir(input.publicationBundleRoot, { recursive: true });
+  await mkdir(exportRoot, { recursive: true });
   await writeFile(bundleJsonPath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
   await writeFile(
     bundleMarkdownPath,

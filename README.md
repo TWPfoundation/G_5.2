@@ -126,7 +126,8 @@ Current roots include:
 
 - `data/inquiry-sessions/`, `data/memory-items/`, `data/canon-proposals/`, `data/reflection/`, `data/authored-artifacts/` for P-E-S and shared operator workflows
 - `data/witness/sessions/`, `data/witness/memory/`, `data/witness/testimony/`, `data/witness/consent/` for Witness runtime state
-- `data/witness/synthesis/`, `data/witness/annotations/`, `data/witness/archive-candidates/`, `data/witness/publication-bundles/` for downstream Witness review and export state
+- `data/witness/synthesis/`, `data/witness/annotations/`, `data/witness/archive-candidates/`, and `data/witness/publication-bundles/` for downstream Witness review and export state
+  Publication bundles split metadata and emitted artifacts under `data/witness/publication-bundles/records/` and `data/witness/publication-bundles/exports/`.
 
 In Witness mode, persisted turns require both conversational and retention consent. Witness sessions and testimony must write only into Witness roots; they must not read from or write into the P-E-S session/memory roots.
 
