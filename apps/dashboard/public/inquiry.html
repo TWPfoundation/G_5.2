@@ -328,7 +328,7 @@ const state={
   latestProvider:null,sessionSearch:"",memorySearch:"",
   sortKey:"updatedAt",sortDir:"desc",archiveFilter:"active",tagFilter:null,
   providerList:[],defaultProvider:null,hasApiKey:false,
-  product:"pes",witnessId:"",witnessConsent:[],witnessTestimony:[],witnessSynthesis:[],witnessAnnotations:[],witnessArchiveCandidates:[],witnessPublicationBundles:[],selectedWitnessTestimonyId:null,memoryStateFilter:"accepted",
+  product:"pes",witnessId:"",witnessConsent:[],witnessTestimony:[],witnessSynthesis:[],witnessAnnotations:[],witnessArchiveCandidates:[],witnessPublicationBundles:[],witnessPublicationPackages:[],selectedWitnessTestimonyId:null,memoryStateFilter:"accepted",
   isSending:false,lastError:null,pendingRetry:null,
   previewSnapshot:null,previewMode:null,previewSessionId:null,
   publicationPreview:null
@@ -354,12 +354,24 @@ function activeWitnessPublicationBundles(){
   const active=activeWitnessTestimony();
   return active?state.witnessPublicationBundles.filter(item=>item.testimonyId===active.id):[];
 }
+function activeWitnessPublicationPackages(){
+  const active=activeWitnessTestimony();
+  return active?state.witnessPublicationPackages.filter(item=>item.testimonyId===active.id):[];
+}
 function publicationBundlesForArchiveCandidate(archiveCandidateId){
   return activeWitnessPublicationBundles().filter(item=>item.archiveCandidateId===archiveCandidateId);
+}
+function publicationPackageForBundle(bundleId){
+  return activeWitnessPublicationPackages().find(item=>item.bundleId===bundleId)||null;
 }
 function publicationBundleArtifactUrl(id,format,download=false){
   const url=new URL(`/api/witness/publication-bundles/${encodeURIComponent(id)}/${format}`,window.location.origin);
   if(download)url.searchParams.set("download","1");
+  return url.pathname+url.search;
+}
+function publicationPackageDownloadUrl(id){
+  const url=new URL(`/api/witness/publication-packages/${encodeURIComponent(id)}/file`,window.location.origin);
+  url.searchParams.set("download","1");
   return url.pathname+url.search;
 }
 function clearWitnessPublicationPreview(){
@@ -843,11 +855,14 @@ function renderWitnessCard(){
         }).join("")}
       </div>`:'<div class="meta" style="margin-top:8px">No publication-ready archive candidates for this testimony yet.</div>'}
     </div>
-    ${publicationBundles.length?publicationBundles.map(item=>`
+    ${publicationBundles.length?publicationBundles.map(item=>{
+      const publicationPackage=publicationPackageForBundle(item.id);
+      return `
       <div class="context">
         <div class="label">${esc(item.status)} · ${esc(item.id.slice(0,8))}</div>
         <div class="value">Archive candidate: ${esc(item.archiveCandidateId)}</div>
         <div class="meta">Created ${fmt(item.createdAt)}</div>
+        ${publicationPackage?`<div class="meta">Package ${esc(publicationPackage.packageFilename)} · ${(publicationPackage.packageByteSize||0).toLocaleString()} bytes · updated ${fmt(publicationPackage.updatedAt)}</div>`:`<div class="meta">Package not created yet for this bundle.</div>`}
         <div class="rerun-row" style="margin-top:8px">
           <button class="btn quiet" data-witness-publication-view-json="${esc(item.id)}">View JSON</button>
           <button class="btn quiet" data-witness-publication-view-markdown="${esc(item.id)}">View Markdown</button>
@@ -855,8 +870,10 @@ function renderWitnessCard(){
           <a class="btn quiet" href="${esc(publicationBundleArtifactUrl(item.id,"json",true))}">Download JSON</a>
           <a class="btn quiet" href="${esc(publicationBundleArtifactUrl(item.id,"markdown",true))}">Download Markdown</a>
           ${item.bundleManifestPath?`<a class="btn quiet" href="${esc(publicationBundleArtifactUrl(item.id,"manifest",true))}">Download Manifest</a>`:""}
+          ${publicationPackage?`<a class="btn quiet" data-witness-publication-package-download="${esc(publicationPackage.id)}" href="${esc(publicationPackageDownloadUrl(publicationPackage.id))}">Download Package</a>`:`<button class="btn quiet" data-witness-publication-package-create="${esc(item.id)}">Create Package</button>`}
         </div>
-      </div>`).join(""):'<div class="meta">No publication bundles yet for this testimony.</div>'}
+      </div>`;
+    }).join(""):'<div class="meta">No publication bundles yet for this testimony.</div>'}
     ${state.publicationPreview?`
       <div class="context" id="witnessPublicationPreviewCard">
         <div class="label">Preview · ${esc(state.publicationPreview.format.toUpperCase())} · ${esc(state.publicationPreview.bundleId.slice(0,8))}</div>
@@ -932,6 +949,10 @@ function renderWitnessCard(){
     const id=node.getAttribute("data-witness-publication-view-manifest");
     if(id)await viewWitnessPublicationBundle(id,"manifest");
   }));
+  $$("[data-witness-publication-package-create]").forEach(node=>node.addEventListener("click",async()=>{
+    const bundleId=node.getAttribute("data-witness-publication-package-create");
+    if(bundleId)await createWitnessPublicationPackageRecord(bundleId);
+  }));
   const publicationPreviewBody=$("#witnessPublicationPreviewBody");
   if(publicationPreviewBody&&state.publicationPreview){
     publicationPreviewBody.textContent=state.publicationPreview.text;
@@ -951,11 +972,11 @@ function renderWitnessCard(){
 
 async function loadWitnessData(){
   if(!isWitness()){
-    state.witnessConsent=[];state.witnessTestimony=[];state.witnessSynthesis=[];state.witnessAnnotations=[];state.witnessArchiveCandidates=[];state.witnessPublicationBundles=[];state.selectedWitnessTestimonyId=null;clearWitnessPublicationPreview();renderWitnessCard();return;
+    state.witnessConsent=[];state.witnessTestimony=[];state.witnessSynthesis=[];state.witnessAnnotations=[];state.witnessArchiveCandidates=[];state.witnessPublicationBundles=[];state.witnessPublicationPackages=[];state.selectedWitnessTestimonyId=null;clearWitnessPublicationPreview();renderWitnessCard();return;
   }
   const witnessId=activeWitnessId();
   if(!witnessId){
-    state.witnessConsent=[];state.witnessTestimony=[];state.witnessSynthesis=[];state.witnessAnnotations=[];state.witnessArchiveCandidates=[];state.witnessPublicationBundles=[];state.selectedWitnessTestimonyId=null;clearWitnessPublicationPreview();renderWitnessCard();return;
+    state.witnessConsent=[];state.witnessTestimony=[];state.witnessSynthesis=[];state.witnessAnnotations=[];state.witnessArchiveCandidates=[];state.witnessPublicationBundles=[];state.witnessPublicationPackages=[];state.selectedWitnessTestimonyId=null;clearWitnessPublicationPreview();renderWitnessCard();return;
   }
   try{
     const [consentRes,testimonyRes]=await Promise.all([
@@ -985,15 +1006,21 @@ async function loadWitnessData(){
         .then(async r=>r.ok?await r.json():[])
         .catch(()=>[])
     ));
+    const publicationPackagesResponses=await Promise.all(publicationBundleResponses.flat().map(item=>
+      fetch(`/api/witness/publication-packages?bundleId=${encodeURIComponent(item.id)}`)
+        .then(async r=>r.ok?await r.json():[])
+        .catch(()=>[])
+    ));
     state.witnessSynthesis=synthesisResponses.flat();
     state.witnessAnnotations=annotationResponses.flat();
     state.witnessArchiveCandidates=archiveResponses.flat();
     state.witnessPublicationBundles=publicationBundleResponses.flat();
+    state.witnessPublicationPackages=publicationPackagesResponses.flat();
     if(state.selectedWitnessTestimonyId&&!state.witnessTestimony.some(item=>item.id===state.selectedWitnessTestimonyId)){
       state.selectedWitnessTestimonyId=null;
     }
   }catch{
-    state.witnessConsent=[];state.witnessTestimony=[];state.witnessSynthesis=[];state.witnessAnnotations=[];state.witnessArchiveCandidates=[];state.witnessPublicationBundles=[];state.selectedWitnessTestimonyId=null;clearWitnessPublicationPreview();
+    state.witnessConsent=[];state.witnessTestimony=[];state.witnessSynthesis=[];state.witnessAnnotations=[];state.witnessArchiveCandidates=[];state.witnessPublicationBundles=[];state.witnessPublicationPackages=[];state.selectedWitnessTestimonyId=null;clearWitnessPublicationPreview();
   }
   renderWitnessCard();
 }
@@ -1094,6 +1121,17 @@ async function createWitnessPublicationBundleRecord(archiveCandidateId){
   });
   const data=await res.json();
   if(!res.ok){setError(data.error||"Failed to create publication bundle",data);return}
+  setError("");
+  await loadWitnessData();
+}
+
+async function createWitnessPublicationPackageRecord(bundleId){
+  const res=await fetch("/api/witness/publication-packages",{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({bundleId})
+  });
+  const data=await res.json();
+  if(!res.ok){setError(data.error||"Failed to create publication package",data);return}
   setError("");
   await loadWitnessData();
 }

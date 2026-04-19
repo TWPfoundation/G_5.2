@@ -1597,4 +1597,10 @@ test("inquiry publication preview uses raw artifact endpoints and textContent re
     /searchParams\.set\("download","1"\)/
   );
   assert.match(html, /textContent\s*=/);
+  assert.match(html, /data-witness-publication-package-create/);
+  assert.match(html, /data-witness-publication-package-download/);
+  assert.match(
+    html,
+    /\/api\/witness\/publication-packages\//
+  );
 });
