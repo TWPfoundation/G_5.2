@@ -328,7 +328,7 @@ const state={
   latestProvider:null,sessionSearch:"",memorySearch:"",
   sortKey:"updatedAt",sortDir:"desc",archiveFilter:"active",tagFilter:null,
   providerList:[],defaultProvider:null,hasApiKey:false,
-  product:"pes",witnessId:"",witnessConsent:[],witnessTestimony:[],witnessSynthesis:[],witnessAnnotations:[],witnessArchiveCandidates:[],witnessPublicationBundles:[],witnessPublicationPackages:[],witnessPublicationPackagesLoading:false,selectedWitnessTestimonyId:null,memoryStateFilter:"accepted",
+  product:"pes",witnessId:"",witnessConsent:[],witnessTestimony:[],witnessSynthesis:[],witnessAnnotations:[],witnessArchiveCandidates:[],witnessPublicationBundles:[],witnessPublicationPackages:[],witnessPublicationPackagesLoading:false,witnessPublicationPackagesRequestToken:0,selectedWitnessTestimonyId:null,memoryStateFilter:"accepted",
   isSending:false,lastError:null,pendingRetry:null,
   previewSnapshot:null,previewMode:null,previewSessionId:null,
   publicationPreview:null
@@ -384,13 +384,20 @@ async function loadWitnessPublicationPackages(){
     state.witnessPublicationPackages=[];state.witnessPublicationPackagesLoading=false;
     return;
   }
+  const requestToken=++state.witnessPublicationPackagesRequestToken;
   state.witnessPublicationPackagesLoading=true;
   try{
     const res=await fetch(witnessPublicationPackagesUrl(witnessId,testimonyId));
-    state.witnessPublicationPackages=res.ok?await res.json():[];
+    const packages=res.ok?await res.json():[];
+    if(requestToken!==state.witnessPublicationPackagesRequestToken)return;
+    if(state.selectedWitnessTestimonyId!==testimonyId||activeWitnessId()!==witnessId)return;
+    state.witnessPublicationPackages=packages;
   }catch{
+    if(requestToken!==state.witnessPublicationPackagesRequestToken)return;
+    if(state.selectedWitnessTestimonyId!==testimonyId||activeWitnessId()!==witnessId)return;
     state.witnessPublicationPackages=[];
   }finally{
+    if(requestToken!==state.witnessPublicationPackagesRequestToken)return;
     state.witnessPublicationPackagesLoading=false;
   }
 }
