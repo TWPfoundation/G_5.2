@@ -20,8 +20,10 @@
 
 import assert from "node:assert/strict";
 import { mkdtemp, mkdir, copyFile, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import http from "node:http";
 import os from "node:os";
 import path from "node:path";
+import { Readable } from "node:stream";
 import { fileURLToPath } from "node:url";
 import { randomUUID } from "node:crypto";
 
@@ -48,8 +50,8 @@ import {
 import { FileWitnessPublicationPackageStore } from "../packages/orchestration/src/witness/filePublicationPackageStore";
 import { createWitnessPublicationPackage } from "../packages/orchestration/src/witness/publicationPackageRuntime";
 import { FileWitnessPublicationDeliveryStore } from "../packages/orchestration/src/witness/filePublicationDeliveryStore";
-import { deliverWitnessPublicationPackage } from "../packages/orchestration/src/witness/publicationDeliveryRuntime";
 import { FileWitnessTestimonyStore } from "../packages/orchestration/src/witness/fileTestimonyStore";
+import { handleRequest } from "../apps/dashboard/src/server";
 import {
   CanonProposalSchema,
   PROPOSAL_SCHEMA_VERSION,
@@ -99,6 +101,112 @@ const EDITABLE_CANON_FILES = [
 interface SmokePath {
   name: string;
   run: () => Promise<void>;
+}
+
+async function requestDashboardJson(
+  options: {
+    witnessConfig: {
+      id: "witness";
+      label: string;
+      policyRoot: string;
+      sessionsRoot: string;
+      memoryRoot: string;
+      testimonyRoot: string;
+      consentRoot: string;
+      synthesisRoot: string;
+      annotationRoot: string;
+      archiveCandidateRoot: string;
+      publicationBundleRoot: string;
+      capabilities: {
+        editorial: boolean;
+        authoring: boolean;
+      };
+    };
+    remoteRoot: string;
+  },
+  pathname: string,
+  init: {
+    method?: string;
+    headers?: Record<string, string>;
+    body?: string;
+  } = {}
+): Promise<{
+  status: number;
+  json: unknown;
+  headers: http.OutgoingHttpHeaders;
+}> {
+  const requestBody = init.body === undefined ? [] : [init.body];
+  const req = Readable.from(requestBody) as Readable &
+    http.IncomingMessage & {
+      method: string;
+      url: string;
+      headers: http.IncomingHttpHeaders;
+    };
+  req.method = init.method ?? "GET";
+  req.url = pathname;
+  req.headers = Object.fromEntries(
+    Object.entries(init.headers ?? {}).map(([key, value]) => [
+      key.toLowerCase(),
+      value,
+    ])
+  );
+
+  let status = 200;
+  let body = "";
+  let responseHeaders: http.OutgoingHttpHeaders = {};
+  let finished!: () => void;
+  const done = new Promise<void>((resolve) => {
+    finished = resolve;
+  });
+
+  const res = {
+    writeHead(
+      nextStatus: number,
+      nextHeaders?: http.OutgoingHttpHeaders
+    ) {
+      status = nextStatus;
+      if (nextHeaders) {
+        responseHeaders = { ...responseHeaders, ...nextHeaders };
+      }
+      return this;
+    },
+    setHeader(name: string, value: string | number | readonly string[]) {
+      responseHeaders[name] = value;
+    },
+    end(chunk?: string | Buffer) {
+      if (chunk !== undefined) {
+        body += Buffer.isBuffer(chunk) ? chunk.toString("utf8") : chunk;
+      }
+      finished();
+      return this;
+    },
+  } as unknown as http.ServerResponse;
+
+  await handleRequest(req, res, {
+    witnessConfig: options.witnessConfig,
+    publicationObjectDeliveryBackendOverride: {
+      name: "azure-blob",
+      async putObject(input) {
+        const target = path.join(
+          options.remoteRoot,
+          input.key.replaceAll("/", path.sep)
+        );
+        await mkdir(path.dirname(target), { recursive: true });
+        await writeFile(target, await readFile(input.filePath));
+        return {
+          remoteKey: input.key,
+          remoteUrl: `file://${target.replaceAll("\\", "/")}`,
+        };
+      },
+    },
+  });
+  await done;
+
+  return {
+    status,
+    json: body ? JSON.parse(body) : null,
+    headers: responseHeaders,
+  };
 }
 
 async function tempRoot(prefix: string): Promise<string> {
@@ -792,47 +900,112 @@ async function pathWitnessVerticalSlice(): Promise<void> {
     assert.equal(packageAgain.id, packageRecord.id);
 
     const fakeRemoteRoot = path.join(root, "remote");
-    const delivered = await deliverWitnessPublicationPackage({
+    const witnessConfig = {
+      id: "witness" as const,
+      label: "Witness",
+      policyRoot: witnessCanonRoot,
+      sessionsRoot: witnessSessionsRoot,
+      memoryRoot: witnessMemoryRoot,
+      testimonyRoot: witnessTestimonyRoot,
+      consentRoot: witnessConsentRoot,
+      synthesisRoot: witnessSynthesisRoot,
+      annotationRoot: witnessAnnotationRoot,
+      archiveCandidateRoot: witnessArchiveCandidateRoot,
       publicationBundleRoot: witnessPublicationBundleRoot,
-      packageId: packageRecord.id,
-      packageStore: publicationPackageStore,
-      deliveryStore: publicationDeliveryStore,
-      backend: {
-        name: "azure-blob",
-        async putObject(input) {
-          const target = path.join(
-            fakeRemoteRoot,
-            input.key.replaceAll("/", path.sep)
-          );
-          await mkdir(path.dirname(target), { recursive: true });
-          await writeFile(target, await readFile(input.filePath));
-          return {
-            remoteKey: input.key,
-            remoteUrl: `file://${target.replaceAll("\\", "/")}`,
-          };
-        },
+      capabilities: {
+        editorial: false,
+        authoring: false,
       },
-    });
-    assert.equal(delivered.status, "succeeded");
-    assert.equal(delivered.backend, "azure-blob");
-    assert.equal(delivered.packageId, packageRecord.id);
-    assert.match(
-      delivered.remoteKey,
-      /^witness\/.+\/testimony\/.+\/packages\/.+\.zip$/
-    );
-    assert.deepEqual(
-      await readFile(
-        path.join(fakeRemoteRoot, delivered.remoteKey.replaceAll("/", path.sep))
-      ),
-      await readFile(packageRecord.packagePath)
-    );
+    };
+
+    {
+      const createResponse = await requestDashboardJson(
+        {
+          witnessConfig,
+          remoteRoot: fakeRemoteRoot,
+        },
+        "/api/witness/publication-deliveries",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            packageId: packageRecord.id,
+            backend: "azure-blob",
+          }),
+        }
+      );
+      const delivered = createResponse.json as {
+          id: string;
+          packageId: string;
+          backend: string;
+          status: string;
+          remoteKey: string;
+          remoteUrl?: string;
+      };
+      assert.equal(createResponse.status, 201);
+      assert.equal(delivered.status, "succeeded");
+      assert.equal(delivered.backend, "azure-blob");
+      assert.equal(delivered.packageId, packageRecord.id);
+      assert.match(
+        delivered.remoteKey,
+        /^witness\/.+\/testimony\/.+\/packages\/.+\.zip$/
+      );
+
+      const listResponse = await requestDashboardJson(
+        {
+          witnessConfig,
+          remoteRoot: fakeRemoteRoot,
+        },
+        `/api/witness/publication-deliveries?packageId=${encodeURIComponent(
+            packageRecord.id
+          )}`
+      );
+      const listed = listResponse.json as Array<{
+        id: string;
+        backend: string;
+        status: string;
+        remoteKey: string;
+      }>;
+      assert.equal(listResponse.status, 200);
+      assert.equal(listed.length, 1);
+      assert.equal(listed[0]?.id, delivered.id);
+
+      const detailResponse = await requestDashboardJson(
+        {
+          witnessConfig,
+          remoteRoot: fakeRemoteRoot,
+        },
+        `/api/witness/publication-deliveries/${encodeURIComponent(
+            delivered.id
+          )}`
+      );
+      const detail = detailResponse.json as {
+        id: string;
+        backend: string;
+        status: string;
+        remoteKey: string;
+      };
+      assert.equal(detailResponse.status, 200);
+      assert.equal(detail.id, delivered.id);
+      assert.equal(detail.backend, "azure-blob");
+    }
     const deliveryRecords = await publicationDeliveryStore.list({
       packageId: packageRecord.id,
     });
     assert.equal(deliveryRecords.length, 1);
-    assert.equal(deliveryRecords[0]?.id, delivered.id);
+    assert.equal(deliveryRecords[0]?.backend, "azure-blob");
     assert.equal(deliveryRecords[0]?.status, "succeeded");
-    assert.equal(deliveryRecords[0]?.remoteKey, delivered.remoteKey);
+    assert.deepEqual(
+      await readFile(
+        path.join(
+          fakeRemoteRoot,
+          deliveryRecords[0]!.remoteKey.replaceAll("/", path.sep)
+        )
+      ),
+      await readFile(packageRecord.packagePath)
+    );
 
     const pesSessionFiles = await readdir(pesSessionsRoot);
     const pesMemoryFiles = await readdir(pesMemoryRoot);

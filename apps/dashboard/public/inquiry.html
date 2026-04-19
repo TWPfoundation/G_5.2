@@ -328,7 +328,7 @@ const state={
   latestProvider:null,sessionSearch:"",memorySearch:"",
   sortKey:"updatedAt",sortDir:"desc",archiveFilter:"active",tagFilter:null,
   providerList:[],defaultProvider:null,hasApiKey:false,
-  product:"pes",witnessId:"",witnessConsent:[],witnessTestimony:[],witnessSynthesis:[],witnessAnnotations:[],witnessArchiveCandidates:[],witnessPublicationBundles:[],witnessPublicationPackages:[],witnessPublicationPackagesLoading:false,witnessPublicationPackagesRequestToken:0,deliveriesByPackageId:{},witnessPublicationDeliveryLoading:false,witnessPublicationDeliveryRequestToken:0,witnessPublicationDeliveryPendingPackageId:null,selectedWitnessTestimonyId:null,memoryStateFilter:"accepted",
+  product:"pes",witnessId:"",witnessConsent:[],witnessTestimony:[],witnessSynthesis:[],witnessAnnotations:[],witnessArchiveCandidates:[],witnessPublicationBundles:[],witnessPublicationPackages:[],witnessPublicationPackagesLoading:false,witnessPublicationPackagesRequestToken:0,deliveriesByPackageId:{},witnessPublicationDeliveryLoading:false,witnessPublicationDeliveryRequestToken:0,witnessPublicationDeliveryPendingPackageId:null,witnessPublicationDeliveryError:null,selectedWitnessTestimonyId:null,memoryStateFilter:"accepted",
   isSending:false,lastError:null,pendingRetry:null,
   previewSnapshot:null,previewMode:null,previewSessionId:null,
   publicationPreview:null
@@ -411,25 +411,34 @@ async function loadWitnessPublicationDeliveries(){
   const witnessId=activeWitnessId();
   const testimonyId=state.selectedWitnessTestimonyId;
   if(!isWitness()||!witnessId||!testimonyId){
-    state.deliveriesByPackageId={};state.witnessPublicationDeliveryLoading=false;
+    state.deliveriesByPackageId={};state.witnessPublicationDeliveryLoading=false;state.witnessPublicationDeliveryError=null;
     return;
   }
   const requestToken=++state.witnessPublicationDeliveryRequestToken;
   state.witnessPublicationDeliveryLoading=true;
+  state.witnessPublicationDeliveryError=null;
   try{
     const res=await fetch(witnessPublicationDeliveriesUrl(witnessId,testimonyId));
-    const deliveries=res.ok?await res.json():[];
     if(requestToken!==state.witnessPublicationDeliveryRequestToken)return;
     if(state.selectedWitnessTestimonyId!==testimonyId||activeWitnessId()!==witnessId)return;
+    if(!res.ok){
+      const data=await res.json().catch(()=>null);
+      state.deliveriesByPackageId={};
+      state.witnessPublicationDeliveryError=(data&&typeof data.error==="string"&&data.error)||`Failed to load remote deliveries (${res.status})`;
+      return;
+    }
+    const deliveries=await res.json();
     const grouped={};
     for(const item of deliveries){
       (grouped[item.packageId] ||= []).push(item);
     }
     state.deliveriesByPackageId=grouped;
+    state.witnessPublicationDeliveryError=null;
   }catch{
     if(requestToken!==state.witnessPublicationDeliveryRequestToken)return;
     if(state.selectedWitnessTestimonyId!==testimonyId||activeWitnessId()!==witnessId)return;
     state.deliveriesByPackageId={};
+    state.witnessPublicationDeliveryError="Failed to load remote deliveries.";
   }finally{
     if(requestToken!==state.witnessPublicationDeliveryRequestToken)return;
     state.witnessPublicationDeliveryLoading=false;
@@ -934,7 +943,7 @@ function renderWitnessCard(){
         <div class="value">Archive candidate: ${esc(item.archiveCandidateId)}</div>
         <div class="meta">Created ${fmt(item.createdAt)}</div>
         ${state.witnessPublicationPackagesLoading?`<div class="meta">Loading package state...</div>`:publicationPackage?`<div class="meta">Package ${esc(publicationPackage.packageFilename)} · ${(publicationPackage.packageByteSize||0).toLocaleString()} bytes · updated ${fmt(publicationPackage.updatedAt)}</div>`:`<div class="meta">Package not created yet for this bundle.</div>`}
-        ${state.witnessPublicationPackagesLoading||!publicationPackage?"":state.witnessPublicationDeliveryLoading?`<div class="meta">Loading delivery status...</div>`:latestDelivery?`<div class="meta">Latest delivery: ${esc(latestDelivery.status)} via ${esc(latestDelivery.backend)} · ${fmt(latestDelivery.createdAt)}</div><div class="meta">${esc(latestDelivery.remoteKey)}${latestDelivery.remoteUrl?` · ${esc(latestDelivery.remoteUrl)}`:""}${latestDelivery.error?` · ${esc(latestDelivery.error)}`:""}</div>`:`<div class="meta">No remote deliveries recorded yet for this package.</div>`}
+        ${state.witnessPublicationPackagesLoading||!publicationPackage?"":state.witnessPublicationDeliveryLoading?`<div class="meta">Loading delivery status...</div>`:state.witnessPublicationDeliveryError?`<div class="meta" style="color:var(--danger)">Remote delivery status unavailable: ${esc(state.witnessPublicationDeliveryError)}</div>`:latestDelivery?`<div class="meta">Latest delivery: ${esc(latestDelivery.status)} via ${esc(latestDelivery.backend)} · ${fmt(latestDelivery.createdAt)}</div><div class="meta">${esc(latestDelivery.remoteKey)}${latestDelivery.remoteUrl?` · ${esc(latestDelivery.remoteUrl)}`:""}${latestDelivery.error?` · ${esc(latestDelivery.error)}`:""}</div>`:`<div class="meta">No remote deliveries recorded yet for this package.</div>`}
         <div class="rerun-row" style="margin-top:8px">
           <button class="btn quiet" data-witness-publication-view-json="${esc(item.id)}">View JSON</button>
           <button class="btn quiet" data-witness-publication-view-markdown="${esc(item.id)}">View Markdown</button>
@@ -1049,11 +1058,11 @@ function renderWitnessCard(){
 
 async function loadWitnessData(){
   if(!isWitness()){
-    state.witnessConsent=[];state.witnessTestimony=[];state.witnessSynthesis=[];state.witnessAnnotations=[];state.witnessArchiveCandidates=[];state.witnessPublicationBundles=[];state.witnessPublicationPackages=[];state.witnessPublicationPackagesLoading=false;state.deliveriesByPackageId={};state.witnessPublicationDeliveryLoading=false;state.witnessPublicationDeliveryPendingPackageId=null;state.selectedWitnessTestimonyId=null;clearWitnessPublicationPreview();renderWitnessCard();return;
+    state.witnessConsent=[];state.witnessTestimony=[];state.witnessSynthesis=[];state.witnessAnnotations=[];state.witnessArchiveCandidates=[];state.witnessPublicationBundles=[];state.witnessPublicationPackages=[];state.witnessPublicationPackagesLoading=false;state.deliveriesByPackageId={};state.witnessPublicationDeliveryLoading=false;state.witnessPublicationDeliveryPendingPackageId=null;state.witnessPublicationDeliveryError=null;state.selectedWitnessTestimonyId=null;clearWitnessPublicationPreview();renderWitnessCard();return;
   }
   const witnessId=activeWitnessId();
   if(!witnessId){
-    state.witnessConsent=[];state.witnessTestimony=[];state.witnessSynthesis=[];state.witnessAnnotations=[];state.witnessArchiveCandidates=[];state.witnessPublicationBundles=[];state.witnessPublicationPackages=[];state.witnessPublicationPackagesLoading=false;state.deliveriesByPackageId={};state.witnessPublicationDeliveryLoading=false;state.witnessPublicationDeliveryPendingPackageId=null;state.selectedWitnessTestimonyId=null;clearWitnessPublicationPreview();renderWitnessCard();return;
+    state.witnessConsent=[];state.witnessTestimony=[];state.witnessSynthesis=[];state.witnessAnnotations=[];state.witnessArchiveCandidates=[];state.witnessPublicationBundles=[];state.witnessPublicationPackages=[];state.witnessPublicationPackagesLoading=false;state.deliveriesByPackageId={};state.witnessPublicationDeliveryLoading=false;state.witnessPublicationDeliveryPendingPackageId=null;state.witnessPublicationDeliveryError=null;state.selectedWitnessTestimonyId=null;clearWitnessPublicationPreview();renderWitnessCard();return;
   }
   try{
     const [consentRes,testimonyRes]=await Promise.all([
@@ -1092,7 +1101,7 @@ async function loadWitnessData(){
     state.witnessPublicationBundles=publicationBundleResponses.flat();
     await Promise.all([loadWitnessPublicationPackages(),loadWitnessPublicationDeliveries()]);
   }catch{
-    state.witnessConsent=[];state.witnessTestimony=[];state.witnessSynthesis=[];state.witnessAnnotations=[];state.witnessArchiveCandidates=[];state.witnessPublicationBundles=[];state.witnessPublicationPackages=[];state.witnessPublicationPackagesLoading=false;state.deliveriesByPackageId={};state.witnessPublicationDeliveryLoading=false;state.witnessPublicationDeliveryPendingPackageId=null;state.selectedWitnessTestimonyId=null;clearWitnessPublicationPreview();
+    state.witnessConsent=[];state.witnessTestimony=[];state.witnessSynthesis=[];state.witnessAnnotations=[];state.witnessArchiveCandidates=[];state.witnessPublicationBundles=[];state.witnessPublicationPackages=[];state.witnessPublicationPackagesLoading=false;state.deliveriesByPackageId={};state.witnessPublicationDeliveryLoading=false;state.witnessPublicationDeliveryPendingPackageId=null;state.witnessPublicationDeliveryError=null;state.selectedWitnessTestimonyId=null;clearWitnessPublicationPreview();
   }
   renderWitnessCard();
 }
