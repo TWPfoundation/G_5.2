@@ -374,6 +374,9 @@ function publicationPackageDownloadUrl(id){
   url.searchParams.set("download","1");
   return url.pathname+url.search;
 }
+function witnessPublicationPackagesUrl(witnessId,testimonyId){
+  return `/api/witness/publication-packages?witnessId=${encodeURIComponent(witnessId)}&testimonyId=${encodeURIComponent(testimonyId)}`;
+}
 function clearWitnessPublicationPreview(){
   state.publicationPreview=null;
 }
@@ -1001,24 +1004,25 @@ async function loadWitnessData(){
         .catch(()=>[])
     ));
     const visibleTestimony=state.witnessTestimony.filter(item=>!state.currentSessionId||item.sessionId===state.currentSessionId);
+    if(state.selectedWitnessTestimonyId&&!visibleTestimony.some(item=>item.id===state.selectedWitnessTestimonyId)){
+      state.selectedWitnessTestimonyId=null;
+    }
     const publicationBundleResponses=await Promise.all(visibleTestimony.map(item=>
       fetch(`/api/witness/publication-bundles?witnessId=${encodeURIComponent(witnessId)}&testimonyId=${encodeURIComponent(item.id)}`)
         .then(async r=>r.ok?await r.json():[])
         .catch(()=>[])
     ));
-    const publicationPackagesResponses=await Promise.all(publicationBundleResponses.flat().map(item=>
-      fetch(`/api/witness/publication-packages?bundleId=${encodeURIComponent(item.id)}`)
-        .then(async r=>r.ok?await r.json():[])
-        .catch(()=>[])
-    ));
+    const activeTestimonyId=state.selectedWitnessTestimonyId;
+    const publicationPackages=activeTestimonyId
+      ? await fetch(witnessPublicationPackagesUrl(witnessId,activeTestimonyId))
+          .then(async r=>r.ok?await r.json():[])
+          .catch(()=>[])
+      : [];
     state.witnessSynthesis=synthesisResponses.flat();
     state.witnessAnnotations=annotationResponses.flat();
     state.witnessArchiveCandidates=archiveResponses.flat();
     state.witnessPublicationBundles=publicationBundleResponses.flat();
-    state.witnessPublicationPackages=publicationPackagesResponses.flat();
-    if(state.selectedWitnessTestimonyId&&!state.witnessTestimony.some(item=>item.id===state.selectedWitnessTestimonyId)){
-      state.selectedWitnessTestimonyId=null;
-    }
+    state.witnessPublicationPackages=publicationPackages;
   }catch{
     state.witnessConsent=[];state.witnessTestimony=[];state.witnessSynthesis=[];state.witnessAnnotations=[];state.witnessArchiveCandidates=[];state.witnessPublicationBundles=[];state.witnessPublicationPackages=[];state.selectedWitnessTestimonyId=null;clearWitnessPublicationPreview();
   }

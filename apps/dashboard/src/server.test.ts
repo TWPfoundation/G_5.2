@@ -1601,6 +1601,18 @@ test("inquiry publication preview uses raw artifact endpoints and textContent re
   assert.match(html, /data-witness-publication-package-download/);
   assert.match(
     html,
-    /\/api\/witness\/publication-packages\//
+    /function witnessPublicationPackagesUrl\(witnessId,testimonyId\)/
+  );
+  assert.match(
+    html,
+    /\/api\/witness\/publication-packages\?witnessId=\$\{encodeURIComponent\(witnessId\)\}&testimonyId=\$\{encodeURIComponent\(testimonyId\)\}/
+  );
+  assert.match(
+    html,
+    /fetch\(witnessPublicationPackagesUrl\(witnessId,activeTestimonyId\)\)/
+  );
+  assert.doesNotMatch(
+    html,
+    /\/api\/witness\/publication-packages\?bundleId=/
   );
 });
