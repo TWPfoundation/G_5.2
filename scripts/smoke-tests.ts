@@ -728,8 +728,14 @@ async function pathWitnessVerticalSlice(): Promise<void> {
       publicationBundleStore,
     });
     assert.equal(bundle.status, "created");
+    const storedBundle = await publicationBundleStore.load(bundle.id);
+    assert.ok(storedBundle, "publication bundle record should persist");
+    assert.equal(storedBundle?.id, bundle.id);
     const bundleJson = await readFile(bundle.bundleJsonPath, "utf8");
     assert.match(bundleJson, /"schemaVersion": "0\.1\.0"/);
+    const bundleMarkdown = await readFile(bundle.bundleMarkdownPath as string, "utf8");
+    assert.match(bundleMarkdown, /Publication Bundle/);
+    assert.match(bundleMarkdown, new RegExp(candidate.id));
 
     const pesSessionFiles = await readdir(pesSessionsRoot);
     const pesMemoryFiles = await readdir(pesMemoryRoot);
