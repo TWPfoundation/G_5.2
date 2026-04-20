@@ -74,7 +74,7 @@ if (-not (Test-Path -LiteralPath (Join-Path $repoRoot "node_modules"))) {
 Push-Location $repoRoot
 try {
   $releaseIdentityScript = @"
-import { gitSha, readDeclaredV1ReleaseSha, summarizeReleaseIdentity } from './scripts/operator-support.mjs';
+import { gitSha, readDeclaredV1ReleaseSha, shortSha, summarizeReleaseIdentity } from './scripts/operator-support.mjs';
 
 const repoRoot = process.cwd();
 const headSha = gitSha(repoRoot, 'HEAD');
@@ -86,6 +86,8 @@ if (!headSha) {
 const declaredV1Sha = await readDeclaredV1ReleaseSha(repoRoot);
 const localTagSha = gitSha(repoRoot, 'refs/tags/v1');
 const summary = summarizeReleaseIdentity({ headSha, declaredV1Sha, localTagSha });
+summary.headShortSha = shortSha(headSha);
+summary.declaredV1ShortSha = shortSha(declaredV1Sha);
 
 process.stdout.write(JSON.stringify(summary));
 "@
@@ -114,13 +116,11 @@ process.stdout.write(JSON.stringify(parsed));
     $parsedEnv = $envJson | ConvertFrom-Json
     if ($parsedEnv) {
       foreach ($property in $parsedEnv.PSObject.Properties) {
-        if (-not (Test-Path "Env:$($property.Name)")) {
-          [Environment]::SetEnvironmentVariable(
-            $property.Name,
-            [string]$property.Value,
-            "Process"
-          )
-        }
+        [Environment]::SetEnvironmentVariable(
+          $property.Name,
+          [string]$property.Value,
+          "Process"
+        )
       }
     }
   } else {
@@ -129,9 +129,9 @@ process.stdout.write(JSON.stringify(parsed));
 
   $dashboardPort = if ($env:DASHBOARD_PORT) { $env:DASHBOARD_PORT } else { "5000" }
 
-  Write-Host "Current SHA: $($identity.headSha)"
-  if ($identity.declaredV1Sha) {
-    Write-Host "Declared v1 SHA: $($identity.declaredV1Sha)"
+  Write-Host "Current SHA: $($identity.headShortSha)"
+  if ($identity.declaredV1ShortSha) {
+    Write-Host "Declared v1 SHA: $($identity.declaredV1ShortSha)"
   }
   Write-Host "Release identity: $($identity.message)"
   Write-Host "Dashboard URL: http://localhost:$dashboardPort/"

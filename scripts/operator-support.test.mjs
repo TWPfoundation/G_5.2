@@ -9,6 +9,7 @@ import {
   gitSha,
   readDeclaredV1ReleaseSha,
   readDotEnvFile,
+  shortSha,
   summarizeReleaseIdentity,
 } from "./operator-support.mjs";
 
@@ -75,6 +76,11 @@ test("readDeclaredV1ReleaseSha falls back from release gate to release note comm
 
   const sha = await readDeclaredV1ReleaseSha(root);
   assert.equal(sha, "b044c7b512ae61154c8b840ba4740fd68db137f4");
+});
+
+test("shortSha renders 40-character commit SHAs as 7-character display values", () => {
+  assert.equal(shortSha("b044c7b512ae61154c8b840ba4740fd68db137f4"), "b044c7b");
+  assert.equal(shortSha(null), null);
 });
 
 test("summarizeReleaseIdentity distinguishes local tag states", () => {

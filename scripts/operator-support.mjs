@@ -32,6 +32,14 @@ export async function readDotEnvFile(envPath) {
   return parseDotEnvContent(content);
 }
 
+export function shortSha(sha) {
+  if (!sha) {
+    return null;
+  }
+
+  return sha.slice(0, 7);
+}
+
 async function readFirstExisting(paths) {
   for (const candidate of paths) {
     try {
