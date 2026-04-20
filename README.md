@@ -75,6 +75,13 @@ G_5.2/
 
 ## Getting Started
 
+Preferred Windows-first operator bootstrap path:
+
+- [`docs/operator-quickstart.md`](docs/operator-quickstart.md)
+
+The quickstart is the supported path for Windows operators. The raw repo
+commands remain available below for direct use.
+
 Prerequisites:
 
 - Node `>=20`

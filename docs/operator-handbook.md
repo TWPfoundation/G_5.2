@@ -2,6 +2,11 @@
 
 **Status:** authoritative operator reference for normal day-to-day operation of G_5.2 at the v1 threshold (M8). For release-gate verification, see `docs/v1-release-checklist.md`. For backup and recovery, see `docs/recovery-and-backups.md`.
 
+For first install, Windows-first startup, and post-update revalidation, use
+[`docs/operator-quickstart.md`](operator-quickstart.md) as the supported
+bootstrap path. This handbook remains the detailed day-to-day reference once
+the system is already installed and running.
+
 This handbook is written for the project operator (you). It assumes the system on disk matches the layout described in `docs/system-map.md` and `README.md`.
 
 ## 1. Mental model
