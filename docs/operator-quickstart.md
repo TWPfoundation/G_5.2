@@ -14,16 +14,27 @@ process-local bypass:
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\operator-install.ps1
 ```
 
+## Prerequisites
+
+- Node `>=20`
+- pnpm `>=9`
+- git
+
 ## First install
 
 ```powershell
 Copy-Item .env.example .env
 .\scripts\operator-install.ps1
-.\scripts\operator-start.ps1
 ```
 
 `.env` is optional at start time; the wrapper warns when it is missing, and
 explicit process environment variables take precedence over `.env` defaults.
+
+## Start
+
+```powershell
+.\scripts\operator-start.ps1
+```
 
 ## Update an existing checkout
 
@@ -37,3 +48,5 @@ git pull
 
 Both wrappers print the current short SHA, the declared `v1` SHA when available,
 and the release identity state before continuing.
+
+Use `docs/operator-handbook.md` next for day-to-day operator workflows.
