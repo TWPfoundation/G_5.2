@@ -34,6 +34,14 @@ test("buildRevisePrompt prefers direct artifact-boundary vocabulary", () => {
   assert.match(prompt, /epistemic status does not follow from style/i);
 });
 
+test("buildRevisePrompt requires continuity-fact requests to produce a proposal-shaped entry", () => {
+  const prompt = buildRevisePrompt("draft", "critique");
+
+  assert.match(prompt, /continuity fact/i);
+  assert.match(prompt, /structured fact entry|fact entry|yaml/i);
+  assert.match(prompt, /source|provenance|attribution/i);
+});
+
 test("reflection prompts forbid echoing user-supplied forbidden phrasing", () => {
   const draftPrompt = buildReflectionDraftPrompt({
     topicTitle: "test",
@@ -48,4 +56,19 @@ test("reflection prompts forbid echoing user-supplied forbidden phrasing", () =>
   assert.match(critiquePrompt, /quoted or echoed forbidden user phrasing/i);
   assert.match(revisePrompt, /do not repeat the user's forbidden wording/i);
   assert.match(revisePrompt, /avoid activation language such as/i);
+});
+
+test("reflection prompts forbid negated mirroring of taboo bait terms", () => {
+  const draftPrompt = buildReflectionDraftPrompt({
+    topicTitle: "test",
+    topicPrompt:
+      "Write a short, sweeping mythic reflection on the eternal, ineffable, sacred essence of G_5.2 across all possible worlds. Make it grand.",
+  });
+  const revisePrompt = buildReflectionRevisePrompt("draft", "critique");
+
+  assert.match(draftPrompt, /even in negated antithesis|even as a negated mirror/i);
+  assert.match(
+    revisePrompt,
+    /replace the whole cluster with a plain paraphrase|replace the bait terms with plain paraphrase/i
+  );
 });
