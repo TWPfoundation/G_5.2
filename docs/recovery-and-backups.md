@@ -178,14 +178,25 @@ To minimize blast radius going forward: see § 2.2 cadence.
 
 ## 7. Sanity checks the operator should run after any restore
 
-```bash
+On a fresh clone or freshly restored checkout, install dependencies first:
+
+```powershell
+.\scripts\operator-install.ps1
+```
+
+Then run the post-restore checks:
+
+```powershell
 pnpm validate:canon
+pnpm validate:witness
 pnpm typecheck
 pnpm test
 pnpm smoke
 ```
 
-If all four pass, the runtime is healthy enough for an inquiry turn. Run a small inquiry through `inquiry.html` to confirm end-to-end behavior before resuming normal use.
+If those pass, the runtime is healthy enough for an inquiry turn. Run
+`.\scripts\operator-start.ps1` and confirm a small inquiry through
+`inquiry.html` before resuming normal use.
 
 ## 8. What is *not* recoverable
 
