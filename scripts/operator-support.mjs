@@ -27,6 +27,11 @@ export function parseDotEnvContent(content) {
   return result;
 }
 
+export async function readDotEnvFile(envPath) {
+  const content = await readFile(envPath, "utf8");
+  return parseDotEnvContent(content);
+}
+
 async function readFirstExisting(paths) {
   for (const candidate of paths) {
     try {

@@ -8,6 +8,7 @@ import {
   parseDotEnvContent,
   gitSha,
   readDeclaredV1ReleaseSha,
+  readDotEnvFile,
   summarizeReleaseIdentity,
 } from "./operator-support.mjs";
 
@@ -25,6 +26,27 @@ QUOTED=value=with=equals
     AZURE_OPENAI_ENDPOINT: "https://example.openai.azure.com/",
     QUOTED: "value=with=equals",
   });
+});
+
+test("readDotEnvFile loads KEY=VALUE content from disk without evaluation", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "g52-operator-env-"));
+  const envPath = path.join(root, ".env");
+
+  await writeFile(
+    envPath,
+    [
+      "SAFE_KEY=value",
+      "INLINE_EXPR=$env:HOME",
+      "SUBSHELL=$(Get-ChildItem)",
+      "# comment",
+    ].join("\n"),
+    "utf8"
+  );
+
+  const parsed = await readDotEnvFile(envPath);
+  assert.equal(parsed.SAFE_KEY, "value");
+  assert.equal(parsed.INLINE_EXPR, "$env:HOME");
+  assert.equal(parsed.SUBSHELL, "$(Get-ChildItem)");
 });
 
 test("readDeclaredV1ReleaseSha falls back from release gate to release note commit", async () => {
