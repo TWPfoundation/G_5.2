@@ -19,6 +19,8 @@ The purpose of this sub-project is to turn the newly declared `v1` state into a 
 
 This spec does **not** include the recovery drill itself. It creates the install/start path that the later recovery rehearsal will consume.
 
+The supported path described here is for the **v1 release line after declaration**, not a claim that these scripts already existed inside the original tagged `v1` commit. This sub-project strengthens the declared release line without reopening the v1 gate.
+
 ---
 
 ## Goal
@@ -80,8 +82,8 @@ This is preferred over a more formal packaged installer because that would intro
 
 Add a Windows PowerShell install script that:
 
-- assumes the operator is already inside a clone of the repo
-- checks that it is being run from the expected repo root
+- derives the repo root from the script location (`$PSScriptRoot\..`)
+- validates the expected repo-root files from that derived path
 - checks prerequisite availability for `node` and `pnpm`
 - runs the standard local verification chain
 - fails fast on the first broken step
@@ -92,7 +94,9 @@ Add a Windows PowerShell install script that:
 Add a Windows PowerShell start script that:
 
 - assumes the repo has already been installed successfully
-- loads `.env` if present
+- derives the repo root from the script location (`$PSScriptRoot\..`)
+- validates the expected repo-root files from that derived path
+- loads `.env` if present using a plain `KEY=VALUE` parser only
 - prints the dashboard URL plus release identity
 - starts `pnpm dashboard`
 
@@ -131,6 +135,15 @@ This sub-project deliberately does **not** include:
 ---
 
 ## Operator flow
+
+### Supported shell
+
+For this milestone, the supported shells are:
+
+- **PowerShell 7+** — preferred
+- **Windows PowerShell 5.1** — supported if the implementation stays within compatible PowerShell features
+
+The quickstart must include an execution-policy note for environments where local script execution is blocked, and must present that as a Windows shell-policy issue rather than a repo failure.
 
 ### First install
 
@@ -173,7 +186,8 @@ Responsibility:
 
 Behavior:
 
-- verify repo-root assumptions
+- derive repo root from `$PSScriptRoot`
+- validate repo-root assumptions against that derived path
 - verify prerequisites
 - run:
   - `pnpm install`
@@ -184,7 +198,11 @@ Behavior:
   - `pnpm smoke`
 - print:
   - current commit short SHA
-  - whether `HEAD` equals the `v1` tag target
+  - expected declared `v1` target SHA from repo artifacts when available
+  - release identity state, distinguishing:
+    - `v1 tag present locally and HEAD matches`
+    - `v1 tag present locally and HEAD does not match`
+    - `v1 tag not present locally`
   - a plain success/failure summary
 
 Non-responsibilities:
@@ -202,11 +220,18 @@ Responsibility:
 
 Behavior:
 
+- derive repo root from `$PSScriptRoot`
 - verify minimum repo/install assumptions
-- load `.env` into the process environment if present
+- load `.env` into the process environment if present using a plain parser that
+  only accepts `KEY=VALUE` lines and never evaluates PowerShell expressions or
+  dot-sources arbitrary content
 - print:
   - current commit short SHA
-  - whether `HEAD` equals the `v1` tag target
+  - expected declared `v1` target SHA from repo artifacts when available
+  - release identity state, distinguishing:
+    - `v1 tag present locally and HEAD matches`
+    - `v1 tag present locally and HEAD does not match`
+    - `v1 tag not present locally`
   - dashboard URL
 - run `pnpm dashboard`
 
@@ -254,7 +279,7 @@ The scripts should be strict and explicit.
 
 - `node` is missing
 - `pnpm` is missing
-- the script is not being run from the repo root
+- the derived repo root is invalid or missing expected repo files
 - any verification command fails
 
 It should print:
@@ -291,18 +316,33 @@ The dashboard itself can still run without live-provider credentials, and this s
 
 Release identity should become visible in the operator flow.
 
+The scripts must not treat the local presence of tag `v1` as the only source of truth. A fresh clone or a host with incomplete local tags may still be on the correct release commit.
+
+The release identity logic should therefore combine:
+
+- current `HEAD` SHA
+- local `v1` tag presence and target when available
+- declared `v1` release commit from the release-gate artifact chain when available
+
+The declared release commit should be read from repo artifacts such as:
+
+- `packages/canon/changelog/0004-v1-release-gate.md`
+- and, if needed, `docs/release-notes/v1-rc-2026-04-20.md`
+
 ### Install success output should include:
 
 - current short SHA
-- whether `HEAD` matches tag `v1`
-- plain statement of release context:
-  - `This checkout matches v1`
-  - or `This checkout is not exactly v1`
+- expected declared `v1` target SHA when available
+- plain statement of release context, distinguishing:
+  - `This checkout matches local v1 tag`
+  - `Local v1 tag exists but does not match this checkout`
+  - `Local v1 tag is not present; comparing against declared v1 release commit instead`
 
 ### Start output should include:
 
 - current short SHA
-- whether `HEAD` matches tag `v1`
+- expected declared `v1` target SHA when available
+- the same release context distinction used by the install script
 - dashboard URL
 
 This is intentionally simple. The goal is not sophisticated release management. The goal is to reduce ambiguity for the operator standing at a terminal.
@@ -377,7 +417,7 @@ Control:
 
 Control:
 
-- require both scripts to print SHA and `v1` match status
+- require both scripts to print current SHA, expected declared `v1` SHA when available, and the release identity state
 
 ---
 
@@ -390,7 +430,7 @@ This sub-project is complete when:
 - `docs/operator-quickstart.md` exists and is the shortest supported path from clone to dashboard
 - `README.md` points to that quickstart
 - `docs/operator-handbook.md` cross-links it as the bootstrap path
-- the scripts clearly identify whether the checkout is exactly `v1`
+- the scripts clearly identify the release context, including current SHA, declared `v1` SHA when available, and local tag state
 - the implementation does not broaden scope into recovery, containers, services, or public-surface work
 
 ---
