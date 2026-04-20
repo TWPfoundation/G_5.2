@@ -12,6 +12,7 @@ process-local bypass:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\operator-install.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\operator-start.ps1
 ```
 
 ## Prerequisites
@@ -47,7 +48,7 @@ git pull
 ## What to expect
 
 Both wrappers print the current short SHA, the declared `v1` SHA when available,
-and the release identity state before continuing.
+and the release identity state, with install doing so after its verification chain.
 
 To confirm this checkout is exactly `v1`, compare the current short SHA to the
 declared `v1` SHA printed by the wrappers. They must match.

@@ -102,6 +102,7 @@ process.stdout.write(JSON.stringify(summary));
     @{ Label = "pnpm validate:witness"; Arguments = @("validate:witness") },
     @{ Label = "pnpm typecheck"; Arguments = @("typecheck") },
     @{ Label = "pnpm test"; Arguments = @("test") },
+    @{ Label = "pnpm test:operator-path"; Arguments = @("test:operator-path") },
     @{ Label = "pnpm smoke"; Arguments = @("smoke") }
   )
 
