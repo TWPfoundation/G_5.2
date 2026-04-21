@@ -42,7 +42,7 @@ Required on top of rung 3:
 - Operator studio integration that unifies inquiry, editorial, reflection, memory, and eval surfaces (M7).
 - Eval matrix healthy across providers; drift-control expansion in place (M6).
 
-Repo capability work through M8 is implemented on disk. Formal v1 declaration still depends on the per-release-candidate baseline capture and operator sign-off in `docs/v1-release-checklist.md` section K and `docs/release-candidate-baseline.md`.
+Repo capability work through M8 is implemented on disk, and `v1` was formally declared on 2026-04-20 under the Azure-first operator scope. Additional provider portability captures still use `docs/v1-release-checklist.md` section K and `docs/release-candidate-baseline.md`, but they are now post-v1 follow-up rather than a prerequisite for acknowledging that declaration.
 
 ## v1 scope
 

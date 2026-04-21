@@ -14,7 +14,7 @@ The repo is a pnpm monorepo organized around four primary surfaces:
 
 The goal is a governed, inspectable runtime whose kernel logic can serve more than one product without cross-contaminating their policy or storage roots.
 
-Milestone implementation work through M8 is landed in the repo, including the Witness-first vertical slice. Formal v1 declaration remains an operator release decision gated by the per-release-candidate baseline capture described in [`docs/v1-release-checklist.md`](docs/v1-release-checklist.md) and [`docs/release-candidate-baseline.md`](docs/release-candidate-baseline.md).
+Milestone implementation work through M8 is landed in the repo, including the Witness-first vertical slice. `v1` was formally declared on 2026-04-20 under the Azure-first operator scope; see [`packages/canon/changelog/0004-v1-release-gate.md`](packages/canon/changelog/0004-v1-release-gate.md) and [`docs/release-notes/v1-rc-2026-04-20.md`](docs/release-notes/v1-rc-2026-04-20.md). Later provider portability captures continue as post-v1 work rather than reopening the original release declaration.
 
 ## Authoritative Status
 

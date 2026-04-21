@@ -72,7 +72,7 @@ A convincing governed runtime is not a single prompt. It is a system:
 | Witness-first vertical slice | ✅ Implemented |
 | Release hardening docs and smoke tests | ✅ Implemented (M8 capability layer, now including seven smoke paths) |
 
-Formal v1 declaration is still an operator release decision: the remaining gate is per-release-candidate baseline capture and sign-off, not missing repo capability work.
+`v1` is already declared under the Azure-first operator scope. Remaining provider baseline captures are post-v1 portability follow-up, not evidence of missing core repo capability work.
 
 ## Post-v1 / out of scope
 
@@ -85,7 +85,7 @@ Formal v1 declaration is still an operator release decision: the remaining gate 
 
 ## Development milestones
 
-The execution ladder is tracked as milestones M0 – M8 in [`../g_52_project_overview_and_roadmap.md`](../g_52_project_overview_and_roadmap.md). The release-rung vocabulary (operator-grade → editorial-grade → reflection-grade → v1) is defined in [`release-criteria.md`](release-criteria.md). Repo capability work through M8 is implemented; the remaining release gate is the per-RC provider baseline capture and operator checkoff recorded outside the milestone implementation commits.
+The execution ladder is tracked as milestones M0 – M8 in [`../g_52_project_overview_and_roadmap.md`](../g_52_project_overview_and_roadmap.md). The release-rung vocabulary (operator-grade → editorial-grade → reflection-grade → v1) is defined in [`release-criteria.md`](release-criteria.md). Repo capability work through M8 is implemented, and `v1` was declared on 2026-04-20 under the Azure-first operator scope. Additional provider baseline captures remain live operational follow-up rather than missing core milestone work.
 
 Public hardening (auth, rate limits, monitoring) is explicitly post-v1; see [`release-criteria.md`](release-criteria.md).
 

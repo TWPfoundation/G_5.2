@@ -307,26 +307,19 @@ But it does mean the project has crossed the line from concept into durable syst
 
 ## 6. What is still genuinely unfinished
 
-The milestone implementation ladder is now landed through M8. The remaining work is release confirmation and post-v1 refinement rather than missing core repo capability.
+`v1` is now formally declared under the Azure-first operator scope. The remaining work is post-v1 refinement rather than missing core repo capability.
 
-### 6.1 Formal v1 declaration on a release candidate
-The repo now contains the capability layer for M0 – M8, but v1 is not formally declared until the operator performs the per-release-candidate baseline capture and signs off the release gate.
-
-That means:
-- capture provider baselines for the providers in scope
-- review drift against the documented budget
-- record the operator go / no-go decision for that canon version
-
-### 6.2 Public-facing product boundary
+### 6.1 Public-facing product boundary
 The current dashboard is an operator studio, not a public-facing product.
 That distinction should remain intact until there is a deliberate post-v1 decision to design auth, rate limits, monitoring, and a reader-facing UX for P-E-S or any later Witness-facing surface.
 
-### 6.3 Post-v1 refinement
+### 6.2 Post-v1 refinement
 The remaining open questions are mostly operational and ergonomic:
 - how memory policy performs over longer-lived real usage
 - how Witness eval coverage should expand inside `packages/evals`
 - which studio ergonomics deserve another iteration after actual operator use
 - what, if anything, should evolve from operator-grade tooling into a public surface later
+- when Anthropic, Gemini, and any active OpenAI-path provider baselines should be captured as post-v1 portability follow-up
 
 ---
 
@@ -367,7 +360,7 @@ The remaining open questions are mostly operational and ergonomic:
 - Witness product routing and persistence compensation
 
 ### What is still provisional
-- final v1 declaration pending per-RC baseline capture
+- post-v1 provider portability beyond the Azure-first declared scope
 - long-horizon memory behavior under extended real usage
 - long-horizon Witness operational patterns beyond the first consent-gated slice
 - long-horizon product UX
@@ -375,11 +368,11 @@ The remaining open questions are mostly operational and ergonomic:
 
 ---
 
-## 8. Milestone roadmap to v1
+## 8. Milestone roadmap through v1
 
 This roadmap is expressed as milestones M0 – M8. Each milestone advances one or more rungs of the release ladder defined in [`docs/release-criteria.md`](docs/release-criteria.md).
 
-The implementation work for M0 – M8 is now landed in the repo. What remains for formal v1 is the per-release-candidate operator baseline capture and sign-off described in `docs/release-candidate-baseline.md` and `docs/v1-release-checklist.md`.
+The implementation work for M0 – M8 is now landed in the repo, and the Azure-first `v1` declaration has been recorded in `packages/canon/changelog/0004-v1-release-gate.md`. The per-release-candidate baseline procedure in `docs/release-candidate-baseline.md` and `docs/v1-release-checklist.md` remains the method for later portability follow-up and for any future release declarations that broaden provider scope.
 
 ### M0 — Baseline lock & source-of-truth cleanup
 **Status:** Implemented
@@ -432,7 +425,7 @@ Landed via the dashboard-served multi-surface operator UI in `apps/dashboard/pub
 ### M8 — Release hardening & v1 threshold ✅ implemented
 Stabilize configuration, reproducibility, and upgrade paths so the system can be used regularly without repo surgery. Cross the v1 threshold as defined in `docs/release-criteria.md`.
 
-Landed via the v1 release checklist (`docs/v1-release-checklist.md`) covering canon, Witness policy, persistence, memory, editorial, reflection, evals, studio, docs, ops, backups, RC baselines, and invariants; an operator handbook (`docs/operator-handbook.md`); a recovery & backups doc with six numbered scenarios (`docs/recovery-and-backups.md`); seven canonical demo paths (`docs/demo-paths.md`), all exercised end-to-end against the MockProvider by `scripts/smoke-tests.ts` (run via `pnpm smoke`); a per-provider RC baseline procedure (`docs/release-candidate-baseline.md`) that reuses `scripts/refresh-gold-baseline.ts`; and an explicit post-v1 support posture (`docs/post-v1-support-posture.md`) marking public-launch concerns out of scope. Repo capability work is complete through M8; formal v1 declaration still depends on per-RC operator checkoff.
+Landed via the v1 release checklist (`docs/v1-release-checklist.md`) covering canon, Witness policy, persistence, memory, editorial, reflection, evals, studio, docs, ops, backups, RC baselines, and invariants; an operator handbook (`docs/operator-handbook.md`); a recovery & backups doc with six numbered scenarios (`docs/recovery-and-backups.md`); seven canonical demo paths (`docs/demo-paths.md`), all exercised end-to-end against the MockProvider by `scripts/smoke-tests.ts` (run via `pnpm smoke`); a per-provider RC baseline procedure (`docs/release-candidate-baseline.md`) that reuses `scripts/refresh-gold-baseline.ts`; and an explicit post-v1 support posture (`docs/post-v1-support-posture.md`) marking public-launch concerns out of scope. Repo capability work is complete through M8, and the Azure-first `v1` declaration has now been recorded under `packages/canon/changelog/0004-v1-release-gate.md`.
 
 ---
 
@@ -449,20 +442,19 @@ Still, the later horizon likely includes:
 - possible public-facing release surface
 
 But that should remain secondary to the actual nearer milestone:
-**a genuinely usable V1.**
+**a durable post-v1 operator release line.**
 
 ---
 
 ## 10. Recommended immediate next moves
 
-The shortest path from the current repo state to a formal v1 declaration is now operational rather than architectural:
+The shortest path from the current repo state to stronger post-v1 durability is now operational rather than architectural:
 
-1. Run the clean-clone verification flow: `pnpm install`, `pnpm validate:canon`, `pnpm validate:witness`, `pnpm typecheck`, `pnpm test`, `pnpm smoke`.
-2. Capture release-candidate provider baselines for the providers in scope and promote them through `scripts/refresh-gold-baseline.ts`.
-3. Review drift against `docs/drift-budget.md` and record any explicitly accepted deltas.
-4. Operate both P-E-S and Witness sessions long enough to confirm the current memory/editorial/reflection/Witness ergonomics are acceptable at the target canon version.
-5. Expand Witness-specific eval coverage inside `packages/evals`.
-6. Decide whether to declare v1 for that release candidate.
+1. Continue Post-v1 Milestone 1 closure: keep release, install, and recovery docs aligned with the actual shipped operator path.
+2. Capture additional provider baselines only when the relevant credentials/quota are live, and record any out-of-scope providers explicitly rather than leaving ambiguity.
+3. Operate both P-E-S and Witness sessions long enough to confirm the current memory/editorial/reflection/Witness ergonomics are acceptable under real usage.
+4. Expand Witness-specific eval coverage inside `packages/evals`.
+5. Decide what belongs in the next post-v1 milestone without reopening the v1 scope itself.
 
 ---
 

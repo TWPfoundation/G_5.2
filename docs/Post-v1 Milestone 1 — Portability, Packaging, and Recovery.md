@@ -1,6 +1,6 @@
 # Post-v1 Milestone 1 — Portability, Packaging, and Recovery
 
-**Status:** proposed  
+**Status:** in progress  
 **Class:** post-v1 milestone  
 **Scope posture:** operator-only, trusted-host, no public-user expansion
 
@@ -20,6 +20,13 @@ Instead, it focuses on four practical goals:
 2. improve provider-portability coverage where credentials exist
 3. produce one supported operator distribution path
 4. rehearse backup and recovery against the declared v1 state
+
+Progress snapshot as of 2026-04-21:
+
+- release closure is complete: `v1` is declared, tagged, and pushed
+- the Windows-first operator distribution path is implemented and documented
+- clean recovery rehearsal and bounded failure-injection rehearsal are both completed and recorded under `docs/recovery-drills/`
+- provider portability follow-up remains pending live credentials/quota beyond the Azure path already captured at release time
 
 ---
 
