@@ -15,6 +15,7 @@
     "validate-canon": "tsx scripts/validate-canon.ts",
     "evals": "tsx scripts/run-evals.ts",
     "dashboard": "tsx apps/dashboard/src/server.ts",
+    "sync-engine": "tsx --env-file=.env scripts/sync-engine-index.ts",
     "smoke": "tsx scripts/smoke-tests.ts"
   },
   "devDependencies": {
