@@ -1,4 +1,4 @@
-export type PublicationDeliveryBackend = "azure-blob";
+export type PublicationDeliveryBackend = "azure-blob" | "s3";
 export type PublicationDeliveryStatus = "succeeded" | "failed";
 
 export interface PublicationDeliveryRecord {
